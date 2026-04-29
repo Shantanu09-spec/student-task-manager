@@ -37,7 +37,11 @@
             <button onclick="sortTasks('desc')">Z to A</button>
         </div>
 
+        <div id="taskStats" style="text-align: center; font-weight: 600; color: #3b82f6; margin-bottom: 1rem;"></div>
+
         <ul id="taskList" aria-live="polite" aria-label="Task list"></ul>
+        
+        <p id="emptyState" style="text-align: center; color: #64748b; margin-top: 1rem;">No tasks added yet!</p>
 
         <p id="errorMsg" class="error" role="alert"></p>
     </main>

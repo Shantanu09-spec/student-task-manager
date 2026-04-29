@@ -80,6 +80,7 @@ function addTask() {
   removeButton.className = "remove-btn";
   removeButton.addEventListener("click", function () {
     li.remove();
+    taskTracker();
   });
 
   taskActions.appendChild(editButton);
@@ -91,6 +92,7 @@ function addTask() {
   li.appendChild(taskActions);
 
   document.getElementById("taskList").appendChild(li);
+  taskTracker();
 
   input.value = "";
   input.focus();
@@ -106,6 +108,26 @@ function toggleTask(checkbox) {
   } else {
     li.classList.remove("completed");
     span.removeAttribute("aria-label");
+  }
+  taskTracker();
+}
+
+function taskTracker() {
+  const tasks = document.querySelectorAll("#taskList li");
+  const completed = document.querySelectorAll("#taskList input:checked");
+
+  const empty = document.getElementById("emptyState");
+  if (empty) {
+    empty.style.display = tasks.length === 0 ? "block" : "none";
+  }
+
+  const stats = document.getElementById("taskStats");
+  if (stats) {
+    if (tasks.length === 0) {
+      stats.innerText = "";
+    } else {
+      stats.innerText = `✅ ${completed.length} / ${tasks.length} completed`;
+    }
   }
 }
 
@@ -126,3 +148,6 @@ function sortTasks(order) {
 
   tasks.forEach(task => taskList.appendChild(task));
 }
+
+// Initialize on page load
+taskTracker();
