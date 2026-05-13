@@ -3,127 +3,108 @@ function addTask() {
   const task = input.value.trim();
   const errorMsg = document.getElementById("errorMsg");
 
-  if (task.trim()=== "") {
-    errorMsg.textContent = " Please enter a task.";
+  if (task === "") {
+    errorMsg.textContent = "Please enter a task.";
     return;
-  };
+  }
   errorMsg.textContent = "";
-  const li = document.createElement("li");
-
-
-  const checkbox = document.createElement("input");
-  checkbox.type = "checkbox";
-  checkbox.addEventListener("change", function () {
-    toggleTask(checkbox);
-  });
-
-  const span = document.createElement("span");
-  span.textContent = task;
 
   const now = new Date();
-  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  const day = dayNames[now.getDay()];
-  const date =`${now.getDate()} ${now.toLocaleString("default", { month: "long" })} ${now.getFullYear()}`;
-  const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  const timeElement = document.createElement("small");
-  timeElement.textContent = ` (${day}, ${date} at ${time})`;
-  timeElement.style.marginLeft = "10px";
-  timeElement.style.color = "#888";
+  const timestamp = ` (${now.toLocaleDateString()} at ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`;
 
+  const taskData = {
+    text: task,
+    completed: false,
+    timestamp: timestamp
+  };
 
-  const editButton = document.createElement("button");
-    editButton.textContent = "Edit";
-    editButton.addEventListener("click", function () {
-      const newTask = prompt("Edit task:", span.textContent);
-      if (newTask !== null) {
-        span.textContent = newTask;
-      }
-    });
-    li.appendChild(span);
-    li.appendChild(timeElement);
-    li.appendChild(editButton);
-  const removeButton = document.createElement("button");
-  removeButton.textContent = "Remove";
-  removeButton.addEventListener("click", function () {
-    li.remove();
+  createTaskElement(taskData);
+  input.value = "";
+  taskTracker();
+  saveTasks();
+}
 
+function createTaskElement(task) {
+  const li = document.createElement("li");
+  li.innerHTML = `
+    <input type="checkbox" ${task.completed ? 'checked' : ''}>
+    <span class="${task.completed ? 'completed' : ''}">${task.text}</span>
+    <small style="margin-left: 10px; color: #888;">${task.timestamp}</small>
+    <button class="edit-btn">Edit</button>
+    <button class="remove-btn">Remove</button>
+  `;
+
+  const checkbox = li.querySelector('input[type="checkbox"]');
+  checkbox.addEventListener("change", () => {
+    li.querySelector('span').classList.toggle("completed");
     taskTracker();
-    
+    saveTasks();
   });
 
+  const editButton = li.querySelector('.edit-btn');
+  editButton.addEventListener("click", () => {
+    const span = li.querySelector('span');
+    const newTask = prompt("Edit task:", span.textContent);
+    if (newTask !== null) {
+      span.textContent = newTask;
+      saveTasks();
+    }
+  });
 
-
-  li.appendChild(checkbox);
-  li.appendChild(span);
-
-
-  li.appendChild(removeButton);
+  li.querySelector('.remove-btn').addEventListener("click", () => {
+    li.remove();
+    taskTracker();
+    saveTasks();
+  });
 
   document.getElementById("taskList").appendChild(li);
-  
-  input.value = "";
-
-  taskTracker();
-
 }
-/* =========================
-   MULTI-THEME SWITCHER
-========================= */
 
-const themeSwitcher = document.getElementById("themeSwitcher");
+function saveTasks() {
+  const tasks = [];
+  document.querySelectorAll("#taskList li").forEach((li) => {
+    tasks.push({
+      text: li.querySelector("span").textContent,
+      completed: li.querySelector("input").checked,
+      timestamp: li.querySelector("small").textContent
+    });
+  });
+  localStorage.setItem("tasks", JSON.stringify(tasks));
+}
 
-// Load saved theme
-const savedTheme = localStorage.getItem("theme") || "light";
-document.documentElement.setAttribute("data-theme", savedTheme);
+function loadTasks() {
+  const savedTasks = JSON.parse(localStorage.getItem("tasks") || "[]");
+  const taskList = document.getElementById("taskList");
+  taskList.innerHTML = "";
+  savedTasks.forEach((task) => createTaskElement(task));
+  taskTracker();
+}
 
-if (themeSwitcher) {
-  themeSwitcher.value = savedTheme;
+document.addEventListener("DOMContentLoaded", loadTasks);
 
-  themeSwitcher.addEventListener("change", function (e) {
-    const selectedTheme = e.target.value;
-
-    document.documentElement.setAttribute("data-theme", selectedTheme);
-    localStorage.setItem("theme", selectedTheme);
+const clearAllBtn = document.getElementById("clearAllBtn");
+if (clearAllBtn) {
+  clearAllBtn.addEventListener("click", () => {
+    if (confirm("Are you sure you want to clear all tasks?")) {
+      document.getElementById("taskList").innerHTML = "";
+      taskTracker();
+      saveTasks();
+    }
   });
 }
-
-
-
-
-function toggleTask(checkbox) {
-  const span = checkbox.nextElementSibling;
-  span.classList.toggle("completed");
-
-  taskTracker();
-}
-
 
 function taskTracker() {
   const tasks = document.querySelectorAll("#taskList li");
   const completed = document.querySelectorAll("#taskList input:checked");
-
-  const empty = document.getElementById("emptyState");
-  if (empty) {
-    empty.style.display = tasks.length === 0 ? "block" : "none";
-  }
-
   const stats = document.getElementById("taskStats");
-  if (stats) {
-    stats.innerText = `✅ ${completed.length} / ${tasks.length} completed`;
-  }
-
+  if (stats) stats.innerText = `✅ ${completed.length} / ${tasks.length} completed`;
+  
   const celebration = document.getElementById("celebration");
-
   if (tasks.length > 0 && tasks.length === completed.length) {
     celebration.classList.remove("hidden");
-
-    setTimeout(() => {
-      celebration.classList.add("show");
-    }, 100);
+    celebration.classList.add("show");
   } else {
     celebration.classList.remove("show");
     celebration.classList.add("hidden");
   }
 }
-
-
