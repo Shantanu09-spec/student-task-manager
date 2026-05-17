@@ -11,9 +11,23 @@
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 </head>
 <body>
-  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <div class="app-layout">
+    <!-- Navigation Sidebar -->
+    <nav class="app-sidebar" id="appSidebar">
+      <div class="sidebar-brand">
+        <span class="logo-icon">🚀</span>
+        <span class="brand-text">TaskMaster</span>
+      </div>
+      <ul class="nav-links">
+        <li class="active"><a href="#"><span class="nav-icon">📊</span><span class="nav-text">Dashboard</span></a></li>
+        <li><a href="#workspace-title"><span class="nav-icon">✅</span><span class="nav-text">Tasks</span></a></li>
+        <li><a href="#timerDisplay"><span class="nav-icon">⏱️</span><span class="nav-text">Focus</span></a></li>
+      </ul>
+    </nav>
 
-  <header class="site-header">
+    <div class="app-main-wrapper">
+      <a class="skip-link" href="#main-content">Skip to main content</a>
+      <header class="site-header">
     <div class="header-inner">
       <div class="header-brand">
         <h1>📚 Study Task Tracker</h1>
@@ -28,20 +42,20 @@
           <span class="stats-pill-label">Progress</span>
           <span id="headerStats" class="stats-pill-value">🎯 0%</span>
         </div>
-        <div class="theme-pill">
-          <span class="theme-pill-label">Theme</span>
-          <select id="themeSwitcher" class="theme-dropdown" aria-label="Switch Theme">
-            <option value="light">🌞 Light</option>
-            <option value="dark" selected>🌙 Dark</option>
-            <option value="blue">🩵 Blue</option>
-            <option value="pastel">🎀 Pastel</option>
-          </select>
-        </div>
       </div>
     </div>
   </header>
 
   <main id="main-content" class="container">
+    
+    <!-- Bento Stats Grid (Phase 2) -->
+    <div class="bento-stats-grid">
+      <div class="bento-stat-card"><div class="stat-icon">✅</div><div class="stat-info"><h4>Tasks Completed</h4><h2 id="bentoTasksCount">0</h2></div></div>
+      <div class="bento-stat-card"><div class="stat-icon">⚡</div><div class="stat-info"><h4>Productivity Score</h4><h2 id="bentoProdScore">0</h2></div></div>
+      <div class="bento-stat-card"><div class="stat-icon">⏱️</div><div class="stat-info"><h4>Focus Hours</h4><h2 id="bentoFocusHours">0.0</h2></div></div>
+      <div class="bento-stat-card"><div class="stat-icon">🔥</div><div class="stat-info"><h4>Current Streak</h4><h2 id="bentoStreak">0</h2></div></div>
+    </div>
+
     <div class="dashboard-grid">
       <!-- Left Column: Workspace Card -->
       <section class="workspace-card glass-card" aria-labelledby="workspace-title">
@@ -119,12 +133,20 @@
         <div class="glass-card pomodoro-card">
           <h2 class="sidebar-card-title">⏱️ Focus Timer</h2>
           <div class="pomodoro-modes">
-            <button id="pomodoroModeBtn" class="mode-btn active" onclick="setTimerMode('study')">Study</button>
-            <button id="shortBreakModeBtn" class="mode-btn" onclick="setTimerMode('short')">Short Break</button>
-            <button id="longBreakModeBtn" class="mode-btn" onclick="setTimerMode('long')">Long Break</button>
+            <button id="pomodoroModeBtn" class="mode-btn active" data-mode="study">Study</button>
+            <button id="shortBreakModeBtn" class="mode-btn" data-mode="short">Short Break</button>
+            <button id="longBreakModeBtn" class="mode-btn" data-mode="long">Long Break</button>
           </div>
           <div class="pomodoro-timer-display">
-            <span id="timerDisplay">25:00</span>
+            <div class="timer-svg-container">
+              <svg width="160" height="160" viewBox="0 0 160 160">
+                <circle cx="80" cy="80" r="75" class="timer-bg"></circle>
+                <circle cx="80" cy="80" r="75" class="timer-progress" id="timerProgressRing"></circle>
+              </svg>
+              <div class="timer-time-overlay">
+                <span id="timerDisplay">25:00</span>
+              </div>
+            </div>
           </div>
           <div class="pomodoro-controls">
             <button id="startPauseBtn" class="timer-btn primary-btn">▶️ Start</button>
@@ -151,6 +173,13 @@
               <div class="streak-badge" id="streakBadge" title="Your consecutive days study streak!">
                 🔥 <span id="streakCount">0</span> days
               </div>
+            </div>
+            <div class="xp-level-container" style="display: flex; justify-content: space-between; align-items: center; margin: 0 0 1rem 0; background: rgba(255,255,255,0.03); padding: 0.5rem 0.75rem; border-radius: 12px; border: 1px solid var(--border-color);">
+              <span id="playerLevel" style="font-weight: 800; font-family: 'Outfit'; font-size: 0.85rem; color: var(--accent-color);">LVL 1</span>
+              <div style="flex: 1; height: 6px; background: rgba(255,255,255,0.05); margin: 0 0.75rem; border-radius: 999px; overflow: hidden; position: relative;">
+                <div id="playerXpBar" style="width: 0%; height: 100%; background: var(--primary-gradient); transition: width 0.5s ease; border-radius: 999px;"></div>
+              </div>
+              <span id="playerXpText" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; white-space: nowrap;">0 / 100 XP</span>
             </div>
             <div class="goal-progress-section">
               <div class="circular-progress">
@@ -211,6 +240,69 @@
     <p>Accessible study tracking with keyboard support and semantic structure.</p>
     <p>&copy; 2026 Study Task Tracker</p>
   </footer>
+  <button class="fab-add-task" onclick="document.getElementById('taskInput').focus()" aria-label="Add new task">
+    <span style="font-size: 1.5rem; line-height: 1;">+</span>
+  </button>
+    </div> <!-- End app-main-wrapper -->
+  </div> <!-- End app-layout -->
+
+  <!-- Floating Command Palette (Phase 5) -->
+  <div id="commandPalette" class="command-palette-overlay" aria-hidden="true">
+    <div class="command-palette-container glass-card">
+      <div class="palette-search-wrapper">
+        <span class="palette-search-icon">🔍</span>
+        <input type="text" id="paletteSearchInput" placeholder="Type a command or search..." aria-label="Command palette input">
+        <kbd class="palette-esc-kbd">ESC</kbd>
+      </div>
+      <ul class="palette-results" id="paletteResults">
+        <li class="palette-item active" data-action="addTask">
+          <span class="item-icon">➕</span>
+          <span class="item-text">Add a new task...</span>
+          <kbd class="item-shortcut">N</kbd>
+        </li>
+        <li class="palette-item" data-action="startStudy">
+          <span class="item-icon">⏱️</span>
+          <span class="item-text">Start Focus study session</span>
+          <kbd class="item-shortcut">F</kbd>
+        </li>
+        <li class="palette-item" data-action="startShort">
+          <span class="item-icon">☕</span>
+          <span class="item-text">Start Short break</span>
+          <kbd class="item-shortcut">S</kbd>
+        </li>
+        <li class="palette-item" data-action="startLong">
+          <span class="item-icon">🥤</span>
+          <span class="item-text">Start Long break</span>
+          <kbd class="item-shortcut">L</kbd>
+        </li>
+        <li class="palette-item" data-action="focusNotes">
+          <span class="item-icon">📝</span>
+          <span class="item-text">Focus Quick Notes dump pad</span>
+          <kbd class="item-shortcut">O</kbd>
+        </li>
+        <li class="palette-item" data-action="clearTasks">
+          <span class="item-icon">🧹</span>
+          <span class="item-text">Clear all completed tasks</span>
+          <kbd class="item-shortcut">C</kbd>
+        </li>
+        <li class="palette-item" data-action="filterStudy">
+          <span class="item-icon">📚</span>
+          <span class="item-text">Filter: Category "Study"</span>
+        </li>
+        <li class="palette-item" data-action="filterPersonal">
+          <span class="item-icon">💬</span>
+          <span class="item-text">Filter: Category "Personal"</span>
+        </li>
+        <li class="palette-item" data-action="filterWork">
+          <span class="item-icon">🏆</span>
+          <span class="item-text">Filter: Category "Work"</span>
+        </li>
+      </ul>
+      <div class="palette-footer">
+        <span>Use <kbd>↑</kbd> <kbd>↓</kbd> to navigate, <kbd>Enter</kbd> to select, <kbd>Esc</kbd> to dismiss.</span>
+      </div>
+    </div>
+  </div>
 
   <script src="script.js"></script>
 </body>

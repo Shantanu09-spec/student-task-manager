@@ -101,6 +101,18 @@ function createTaskElement(task) {
     li.querySelector('.task-text').classList.toggle("completed");
     const descP = li.querySelector('.task-desc-display');
     if (descP) descP.classList.toggle("completed");
+    
+    if (checkbox.checked) {
+      if (typeof addXp === "function") {
+        addXp(15);
+        showToast("🎯 +15 XP Task Completed!");
+      }
+    } else {
+      if (typeof addXp === "function") {
+        addXp(-15);
+      }
+    }
+    
     taskTracker();
     saveTasks();
   });
@@ -226,6 +238,17 @@ document.addEventListener("DOMContentLoaded", initCategoryFilters);
 function taskTracker() {
   const tasks = document.querySelectorAll("#taskList li");
   const completed = document.querySelectorAll("#taskList input:checked");
+  
+  // Phase 2 Bento Stats Hook
+  const bentoTasks = document.getElementById("bentoTasksCount");
+  if (bentoTasks) bentoTasks.innerText = completed.length;
+  
+  const bentoProd = document.getElementById("bentoProdScore");
+  if (bentoProd) {
+    const percentage = tasks.length > 0 ? Math.round((completed.length / tasks.length) * 100) : 0;
+    bentoProd.innerText = percentage + (completed.length * 10);
+  }
+
   const stats = document.getElementById("taskStats");
   if (stats) stats.innerText = `✅ ${completed.length} / ${tasks.length} completed`;
 
@@ -236,12 +259,14 @@ function taskTracker() {
   }
   
   const celebration = document.getElementById("celebration");
-  if (tasks.length > 0 && tasks.length === completed.length) {
-    celebration.classList.remove("hidden");
-    celebration.classList.add("show");
-  } else {
-    celebration.classList.remove("show");
-    celebration.classList.add("hidden");
+  if (celebration) {
+    if (tasks.length > 0 && tasks.length === completed.length) {
+      celebration.classList.remove("hidden");
+      celebration.classList.add("show");
+    } else {
+      celebration.classList.remove("show");
+      celebration.classList.add("hidden");
+    }
   }
 }
 const searchInput = document.getElementById("searchInput");
@@ -255,22 +280,9 @@ if (searchInput) {
   });
 }
 
-// Theme Selector & Persistence Engine
+// Premium SaaS Theme Enforcement
 document.addEventListener("DOMContentLoaded", () => {
-  const themeSwitcher = document.getElementById("themeSwitcher");
-  const savedTheme = localStorage.getItem("theme") || "dark";
-
-  // Apply theme to document root
-  document.documentElement.setAttribute("data-theme", savedTheme);
-
-  if (themeSwitcher) {
-    themeSwitcher.value = savedTheme;
-    themeSwitcher.addEventListener("change", (e) => {
-      const selectedTheme = e.target.value;
-      document.documentElement.setAttribute("data-theme", selectedTheme);
-      localStorage.setItem("theme", selectedTheme);
-    });
-  }
+  document.documentElement.setAttribute("data-theme", "dark");
 });
 
 // Dynamic Greeting & Live Date Engine
@@ -409,6 +421,15 @@ function updateTimerDisplay() {
   
   timerDisplay.innerText = formattedTime;
   
+  // Phase 4: Pomodoro SVG Progress ring animation
+  const timerProgress = document.getElementById("timerProgressRing");
+  if (timerProgress) {
+    const totalSeconds = timerTimes[currentTimerMode];
+    const percent = timeLeft / totalSeconds;
+    const circumference = 471.24; // 2 * PI * 75
+    timerProgress.style.strokeDashoffset = circumference * (1 - percent);
+  }
+
   // Sync tab title
   const modeEmoji = currentTimerMode === "study" ? "⏱️" : "☕";
   document.title = `(${formattedTime}) ${modeEmoji} Study Tracker`;
@@ -522,8 +543,37 @@ const goalState = {
   goalTarget: 60,
   streakCount: 0,
   lastGoalDate: "", // YYYY-MM-DD
-  lastStudyDate: "" // YYYY-MM-DD
+  lastStudyDate: "", // YYYY-MM-DD
+  xp: 0,
+  level: 1
 };
+
+function getXpForNextLevel(lvl) {
+  return 50 + (lvl * 50);
+}
+
+function addXp(amount) {
+  goalState.xp += amount;
+  if (goalState.xp < 0) goalState.xp = 0;
+  
+  let xpNeeded = getXpForNextLevel(goalState.level);
+  let leveledUp = false;
+  
+  while (goalState.xp >= xpNeeded) {
+    goalState.xp -= xpNeeded;
+    goalState.level += 1;
+    xpNeeded = getXpForNextLevel(goalState.level);
+    leveledUp = true;
+  }
+  
+  if (leveledUp) {
+    showToast(`🎉 Level Up! You reached Level ${goalState.level}!`, "success");
+    triggerTimerConfetti();
+  }
+  
+  saveGoalState();
+  updateGoalUI();
+}
 
 function initGoalTracker() {
   const add15mBtn = document.getElementById("add15m");
@@ -593,6 +643,10 @@ function loadGoalState() {
     goalState.lastGoalDate = localStorage.getItem("studyGoal_lastGoalDate") || "";
     goalState.lastStudyDate = localStorage.getItem("studyGoal_lastStudyDate") || "";
 
+    // Load Gamified XP and Level
+    goalState.xp = parseInt(localStorage.getItem("studyGoal_xp") || "0", 10);
+    goalState.level = parseInt(localStorage.getItem("studyGoal_level") || "1", 10);
+
     // Daily Progress check
     const progressJSON = localStorage.getItem("studyGoal_progress");
     if (progressJSON) {
@@ -618,7 +672,6 @@ function checkStreakBreak() {
   const todayStr = getTodayString();
   const yesterdayStr = getYesterdayString();
   
-  // If the last time they met the goal was before yesterday, and it wasn't met today either, the streak is broken
   if (goalState.lastGoalDate !== todayStr && goalState.lastGoalDate !== yesterdayStr) {
     goalState.streakCount = 0;
     localStorage.setItem("studyGoal_streak", "0");
@@ -639,6 +692,8 @@ function saveGoalState() {
   localStorage.setItem("studyGoal_streak", goalState.streakCount.toString());
   localStorage.setItem("studyGoal_lastGoalDate", goalState.lastGoalDate);
   localStorage.setItem("studyGoal_lastStudyDate", goalState.lastStudyDate);
+  localStorage.setItem("studyGoal_xp", goalState.xp.toString());
+  localStorage.setItem("studyGoal_level", goalState.level.toString());
   saveGoalProgress();
 }
 
@@ -649,18 +704,20 @@ function logStudyMinutes(mins) {
   goalState.dailyMinutes += mins;
   goalState.lastStudyDate = todayStr;
   
+  // Study session completed rewards!
+  addXp(mins * 2);
+  showToast(`✨ Logged ${mins}m of Focus (+${mins * 2} XP)!`, "success");
+
   // Check Streak update
   if (goalState.dailyMinutes >= goalState.goalTarget) {
     if (goalState.lastGoalDate !== todayStr) {
       if (goalState.lastGoalDate === yesterdayStr || goalState.streakCount === 0) {
         goalState.streakCount += 1;
       } else {
-        // Gapped - met goal after breaking streak, reset streak to 1
         goalState.streakCount = 1;
       }
       goalState.lastGoalDate = todayStr;
       
-      // Flash the fire streak badge in celebration!
       const badge = document.getElementById("streakBadge");
       if (badge) {
         badge.style.transform = "scale(1.3) rotate(5deg)";
@@ -671,8 +728,8 @@ function logStudyMinutes(mins) {
         }, 1000);
       }
       
-      // Fire double confetti!
       triggerTimerConfetti();
+      showToast("🔥 Daily Goal Reached! Streak Updated!", "success");
     }
   }
   
@@ -683,7 +740,6 @@ function logStudyMinutes(mins) {
 function resetTodayGoalProgress() {
   goalState.dailyMinutes = 0;
   
-  // If today was the lastGoalDate, we might need to decrement the streak or reset lastGoalDate
   const todayStr = getTodayString();
   if (goalState.lastGoalDate === todayStr) {
     goalState.lastGoalDate = localStorage.getItem("studyGoal_prevGoalDate") || "";
@@ -701,19 +757,36 @@ function updateGoalUI() {
   const goalPercent = document.getElementById("goalPercent");
   const goalMinutesRatio = document.getElementById("goalMinutesRatio");
   const streakCount = document.getElementById("streakCount");
+  
+  const playerLevel = document.getElementById("playerLevel");
+  const playerXpBar = document.getElementById("playerXpBar");
+  const playerXpText = document.getElementById("playerXpText");
+
+  // Phase 2 Bento Stats Hook
+  const bentoFocusHours = document.getElementById("bentoFocusHours");
+  if (bentoFocusHours) bentoFocusHours.innerText = (goalState.dailyMinutes / 60).toFixed(1);
+  const bentoStreak = document.getElementById("bentoStreak");
+  if (bentoStreak) bentoStreak.innerText = goalState.streakCount;
+
+  // Render Gamification XP and Levels
+  if (playerLevel) playerLevel.innerText = `LVL ${goalState.level}`;
+  if (playerXpBar && playerXpText) {
+    const xpNeeded = getXpForNextLevel(goalState.level);
+    const xpPercent = Math.min(100, Math.round((goalState.xp / xpNeeded) * 100));
+    playerXpBar.style.width = `${xpPercent}%`;
+    playerXpText.innerText = `${goalState.xp} / ${xpNeeded} XP`;
+  }
 
   if (!goalPercent) return;
 
   const percent = Math.min(100, Math.round((goalState.dailyMinutes / goalState.goalTarget) * 100));
   
-  // SVG Circumference for radius 50 is 2 * PI * 50 = 314.159
   const circumference = 314.159;
   const offset = circumference - (percent / 100) * circumference;
   
   if (progressRingBar) {
     progressRingBar.style.strokeDashoffset = offset;
     
-    // Dynamic color shifting for goal completion!
     if (percent >= 100) {
       progressRingBar.style.stroke = "var(--success-color, #10b981)";
     } else {
@@ -813,4 +886,220 @@ function initQuickNotes() {
   }
 }
 
+// Global premium notification system (Phase 5)
+function showToast(message, type = "info") {
+  const toastContainer = document.getElementById("toast-container") || createToastContainer();
+  const toast = document.createElement("div");
+  toast.className = `toast-item ${type}`;
+  toast.innerHTML = `
+    <span class="toast-message">${message}</span>
+    <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+  `;
+  toastContainer.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.classList.add("toast-fade-out");
+    setTimeout(() => toast.remove(), 400);
+  }, 3000);
+}
+
+function createToastContainer() {
+  const container = document.createElement("div");
+  container.id = "toast-container";
+  container.className = "toast-container";
+  document.body.appendChild(container);
+  return container;
+}
+
+// Immersive Command Palette Interaction (Phase 5)
+function initCommandPalette() {
+  const palette = document.getElementById("commandPalette");
+  const input = document.getElementById("paletteSearchInput");
+  const results = document.getElementById("paletteResults");
+  
+  if (!palette) return;
+  const items = results.querySelectorAll(".palette-item");
+  let activeIndex = 0;
+
+  // Toggle Command Palette (Ctrl+K or Cmd+K)
+  window.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      openPalette();
+    }
+  });
+
+  input.addEventListener("keydown", (e) => {
+    const currentItems = results.querySelectorAll(".palette-item:not(.hidden)");
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      activeIndex = (activeIndex + 1) % currentItems.length;
+      updateActiveItem(currentItems);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      activeIndex = (activeIndex - 1 + currentItems.length) % currentItems.length;
+      updateActiveItem(currentItems);
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (currentItems[activeIndex]) {
+        triggerAction(currentItems[activeIndex].getAttribute("data-action"));
+      }
+    } else if (e.key === "Escape") {
+      closePalette();
+    }
+  });
+
+  // Global Hotkeys (when no inputs focused)
+  window.addEventListener("keydown", (e) => {
+    if (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA") return;
+    
+    const key = e.key.toLowerCase();
+    if (key === "n") {
+      e.preventDefault();
+      triggerAction("addTask");
+    } else if (key === "f") {
+      e.preventDefault();
+      triggerAction("startStudy");
+    } else if (key === "s") {
+      e.preventDefault();
+      triggerAction("startShort");
+    } else if (key === "l") {
+      e.preventDefault();
+      triggerAction("startLong");
+    } else if (key === "o") {
+      e.preventDefault();
+      triggerAction("focusNotes");
+    } else if (key === "c") {
+      e.preventDefault();
+      triggerAction("clearTasks");
+    }
+  });
+
+  // Filter commands by typing
+  input.addEventListener("input", () => {
+    const query = input.value.toLowerCase();
+    activeIndex = 0;
+    items.forEach(item => {
+      const text = item.querySelector(".item-text").innerText.toLowerCase();
+      if (text.includes(query)) {
+        item.classList.remove("hidden");
+      } else {
+        item.classList.add("hidden");
+      }
+    });
+    const currentItems = results.querySelectorAll(".palette-item:not(.hidden)");
+    updateActiveItem(currentItems);
+  });
+
+  // Click handling
+  items.forEach((item) => {
+    item.addEventListener("click", () => {
+      triggerAction(item.getAttribute("data-action"));
+    });
+  });
+
+  // Click outside to dismiss
+  palette.addEventListener("click", (e) => {
+    if (e.target === palette) {
+      closePalette();
+    }
+  });
+
+  function openPalette() {
+    palette.setAttribute("aria-hidden", "false");
+    input.value = "";
+    items.forEach(item => item.classList.remove("hidden"));
+    activeIndex = 0;
+    updateActiveItem(items);
+    setTimeout(() => input.focus(), 50);
+  }
+
+  function closePalette() {
+    palette.setAttribute("aria-hidden", "true");
+    input.blur();
+  }
+
+  function updateActiveItem(list) {
+    items.forEach(item => item.classList.remove("active"));
+    if (list[activeIndex]) {
+      list[activeIndex].classList.add("active");
+      list[activeIndex].scrollIntoView({ block: "nearest" });
+    }
+  }
+
+  function triggerAction(action) {
+    closePalette();
+    
+    switch (action) {
+      case "addTask":
+        const taskInput = document.getElementById("taskInput");
+        if (taskInput) {
+          taskInput.scrollIntoView({ behavior: "smooth" });
+          setTimeout(() => taskInput.focus(), 300);
+          showToast("Type task name & hit Enter!", "success");
+        }
+        break;
+      case "startStudy":
+        setTimerMode("study");
+        toggleTimer();
+        showToast("⏱️ Focus Session Started!", "success");
+        break;
+      case "startShort":
+        setTimerMode("short");
+        toggleTimer();
+        showToast("☕ Short Break Started!", "success");
+        break;
+      case "startLong":
+        setTimerMode("long");
+        toggleTimer();
+        showToast("🥤 Long Break Started!", "success");
+        break;
+      case "focusNotes":
+        const notes = document.getElementById("quickNotesArea");
+        if (notes) {
+          notes.scrollIntoView({ behavior: "smooth" });
+          setTimeout(() => notes.focus(), 300);
+          showToast("Jot down your notes! 📝", "success");
+        }
+        break;
+      case "clearTasks":
+        const clearBtn = document.getElementById("clearAllBtn");
+        if (clearBtn) {
+          clearBtn.click();
+        }
+        break;
+      case "filterStudy":
+        filterCategory("study");
+        break;
+      case "filterPersonal":
+        filterCategory("personal");
+        break;
+      case "filterWork":
+        filterCategory("work");
+        break;
+    }
+  }
+
+  // Global helper for setting timer mode
+  window.setTimerMode = function(mode) {
+    const btns = document.querySelectorAll(".mode-btn");
+    btns.forEach(btn => {
+      if (btn.getAttribute("data-mode") === mode) {
+        btn.click();
+      }
+    });
+  }
+
+  function filterCategory(cat) {
+    const pills = document.querySelectorAll(".filter-pill");
+    pills.forEach(pill => {
+      if (pill.getAttribute("data-category").toLowerCase() === cat.toLowerCase()) {
+        pill.click();
+        showToast(`Filtered by Category: ${cat} 📚`, "success");
+      }
+    });
+  }
+}
+
 document.addEventListener("DOMContentLoaded", initQuickNotes);
+document.addEventListener("DOMContentLoaded", initCommandPalette);
