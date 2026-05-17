@@ -1,48 +1,85 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Terms of Service - Study Task Tracker</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
 </head>
-<body>
+<body class="legal-page">
 
-<header class="site-header">
-  <h1>📄 Terms of Service</h1>
-</header>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="header-brand">
+        <h1>📄 Terms of Service</h1>
+        <p class="header-subtitle">
+          <span id="headerGreeting">👋 Focus Time!</span>
+          <span class="subtitle-divider">•</span>
+          <span id="headerDate">Sun, May 17</span>
+        </p>
+      </div>
+      <div class="header-controls">
+        <div class="stats-pill">
+          <span class="stats-pill-label">Status</span>
+          <span class="stats-pill-value">📄 Active</span>
+        </div>
+        <div class="theme-pill">
+          <span class="theme-pill-label">Theme</span>
+          <select id="themeSwitcher" class="theme-dropdown" aria-label="Switch Theme">
+            <option value="light">🌞 Light</option>
+            <option value="dark" selected>🌙 Dark</option>
+            <option value="blue">🩵 Blue</option>
+            <option value="pastel">🎀 Pastel</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </header>
 
 <main class="container">
   <p>
     By using Study Task Tracker, you agree to the following terms.
   </p>
 
-  <h2>Use of the Application</h2>
-  <p>
-    This application is provided for personal productivity and educational use only.
-  </p>
+  <div class="legal-tile glass-card">
+    <h2>Use of the Application</h2>
+    <p>
+      This application is provided for personal productivity and educational use only.
+    </p>
+  </div>
 
-  <h2>Local Storage</h2>
-  <p>
-    All data is stored locally in your browser. You are responsible for managing your own data.
-  </p>
+  <div class="legal-tile glass-card">
+    <h2>Local Storage</h2>
+    <p>
+      All data is stored locally in your browser. You are responsible for managing your own data.
+    </p>
+  </div>
 
-  <h2>No Warranty</h2>
-  <p>
-    This application is provided "as is" without any warranties regarding performance or data persistence.
-  </p>
+  <div class="legal-tile glass-card">
+    <h2>No Warranty</h2>
+    <p>
+      This application is provided "as is" without any warranties regarding performance or data persistence.
+    </p>
+  </div>
 
-  <h2>Modifications</h2>
-  <p>
-    Features and terms may be updated or changed at any time.
-  </p>
+  <div class="legal-tile glass-card">
+    <h2>Modifications</h2>
+    <p>
+      Features and terms may be updated or changed at any time.
+    </p>
+  </div>
 
   <p><a href="index.html">← Back to Home</a></p>
 </main>
 
 <footer class="site-footer">
-  <p>&copy; 2026 Study Task Tracker</p>
+  <p>&copy; 2026 Study Task Tracker | Made for students</p>
 </footer>
+
+<script src="script.js"></script>
 
 </body>
 </html>
