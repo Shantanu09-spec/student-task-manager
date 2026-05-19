@@ -3058,5 +3058,53 @@ body.light .drag-handle:hover {
   transition: none !important;
 }
 
+/* ==========================================================================
+   15. ACCESSIBILITY STYLING & KEYBOARD FOCUS RINGS
+   ========================================================================== */
+
+/* Universal keyboard focus-visible custom outline */
+*:focus-visible {
+  outline: 3px solid var(--primary, #8b5cf6) !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 5px rgba(139, 92, 246, 0.45) !important;
+}
+
+/* Visually hidden but screen reader accessible text utility */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* Accessibility focus state adjustments for custom checkbox buttons */
+.check-btn:focus-visible {
+  border-color: var(--primary, #8b5cf6) !important;
+}
+
+/* Accessibility focus adjustments for theme dot buttons */
+.theme-dot:focus-visible {
+  outline: 3px solid #ffffff !important;
+  outline-offset: 2px !important;
+}
+
+/* Accessible visual form validation feedback */
+.input-invalid {
+  border-color: var(--danger, #ef4444) !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25) !important;
+  animation: shakeInput 0.4s ease-in-out;
+}
+
+@keyframes shakeInput {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
 
 

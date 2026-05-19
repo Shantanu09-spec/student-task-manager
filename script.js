@@ -154,11 +154,9 @@ function setTheme(themeName) {
 
   // Update visual dot selector state
   document.querySelectorAll(".theme-dot").forEach(dot => {
-    if (dot.dataset.theme === themeName) {
-      dot.classList.add("active");
-    } else {
-      dot.classList.remove("active");
-    }
+    const isCurrent = dot.dataset.theme === themeName;
+    dot.classList.toggle("active", isCurrent);
+    dot.setAttribute("aria-pressed", isCurrent ? "true" : "false");
   });
 
   // Re-render active charts to match new theme guidelines
@@ -362,6 +360,8 @@ function checkLevelUp(oldXp, newXp) {
       overlay.classList.add("active");
       popup.classList.add("active");
       triggerConfetti();
+      announce(`Level up! You reached Level ${newLevel}. Claim rewards.`);
+      enableFocusTrap(popup);
 
       // Add rewards
       coins += 50;
@@ -413,6 +413,8 @@ function checkStudyMilestones() {
           overlay.classList.add("active");
           popup.classList.add("active");
           triggerConfetti();
+          announce(`Milestone unlocked: ${mil.title}. ${mil.desc}`);
+          enableFocusTrap(popup);
 
           // Add milestone reward
           coins += mil.reward;
@@ -424,17 +426,79 @@ function checkStudyMilestones() {
   });
 }
 
+// Accessibility Helpers: Screen Reader Announcements and Focus Traps
+let activeFocusTrap = null;
+let focusReturnEl = null;
+
+function announce(message) {
+  const container = document.getElementById("srAnnouncement");
+  if (container) {
+    container.textContent = "";
+    // Trigger small delay to force some screen readers to announce updates
+    setTimeout(() => {
+      container.textContent = message;
+    }, 50);
+  }
+}
+
+function enableFocusTrap(modalEl) {
+  focusReturnEl = document.activeElement;
+  activeFocusTrap = modalEl;
+  
+  setTimeout(() => {
+    const focusables = modalEl.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (focusables.length > 0) {
+      focusables[0].focus();
+    }
+  }, 150);
+}
+
+function disableFocusTrap() {
+  activeFocusTrap = null;
+  if (focusReturnEl && typeof focusReturnEl.focus === "function") {
+    focusReturnEl.focus();
+    focusReturnEl = null;
+  }
+}
+
+function handleFocusTrapKey(e) {
+  if (!activeFocusTrap) return;
+  if (e.key === 'Tab') {
+    const focusables = Array.from(activeFocusTrap.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
+      .filter(el => el.offsetWidth > 0 && el.offsetHeight > 0);
+    if (focusables.length === 0) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+
+    if (e.shiftKey) {
+      if (document.activeElement === first) {
+        last.focus();
+        e.preventDefault();
+      }
+    } else {
+      if (document.activeElement === last) {
+        first.focus();
+        e.preventDefault();
+      }
+    }
+  }
+}
+
+document.addEventListener("keydown", handleFocusTrapKey);
+
 // Dismiss popup buttons click listeners
 document.getElementById("claimLevelBtn")?.addEventListener("click", (e) => {
   triggerCoinExplosion(e);
   document.getElementById("levelUpPopupOverlay").classList.remove("active");
   document.getElementById("levelUpPopup").classList.remove("active");
+  disableFocusTrap();
 });
 
 document.getElementById("claimMilestoneBtn")?.addEventListener("click", (e) => {
   triggerCoinExplosion(e);
   document.getElementById("milestonePopupOverlay").classList.remove("active");
   document.getElementById("milestonePopup").classList.remove("active");
+  disableFocusTrap();
 });
 
 // ==========================================================================
@@ -447,7 +511,16 @@ function addTask() {
   const prioritySelect = document.getElementById("prioritySelect");
   const priority = prioritySelect ? prioritySelect.value : "Medium";
 
-  if (text === "") return;
+  if (text === "") {
+    taskInput.classList.add("input-invalid");
+    taskInput.setAttribute("aria-invalid", "true");
+    announce("Failed to add task. Please enter a task description.");
+    setTimeout(() => {
+      taskInput.classList.remove("input-invalid");
+    }, 400);
+    return;
+  }
+  taskInput.setAttribute("aria-invalid", "false");
 
   const task = {
     id: Date.now(),
@@ -469,6 +542,7 @@ function addTask() {
 
   saveData();
   renderTasks();
+  announce(`Task added: "${text}". Category: ${category}, Priority: ${priority}.`);
 }
 
 function createTaskEl(task) {
@@ -507,9 +581,13 @@ function createTaskEl(task) {
 
   // Toggle Complete event
   const checkBtn = div.querySelector(".check-btn");
+  checkBtn.setAttribute("role", "checkbox");
+  checkBtn.setAttribute("aria-checked", task.completed ? "true" : "false");
+
   const handleToggle = () => {
     const oldXp = xp;
     task.completed = !task.completed;
+    checkBtn.setAttribute("aria-checked", task.completed ? "true" : "false");
     const todayStr = getFormattedDate(new Date());
 
     if (task.completed) {
@@ -534,6 +612,7 @@ function createTaskEl(task) {
     saveData();
     updateGamification();
     renderTasks();
+    announce(`Task marked ${task.completed ? "completed" : "incomplete"}: "${task.text}"`);
     
     checkLevelUp(oldXp, xp);
     checkAchievements();
@@ -553,6 +632,7 @@ function createTaskEl(task) {
     tasks = tasks.filter(t => t.id !== task.id);
     saveData();
     renderTasks();
+    announce(`Task deleted: "${task.text}"`);
   });
 
   // Edit task event
@@ -562,6 +642,7 @@ function createTaskEl(task) {
       task.text = updated;
       saveData();
       renderTasks();
+      announce(`Task edited to: "${updated}"`);
     }
   });
 
@@ -1023,21 +1104,23 @@ document.getElementById("resetTimer")?.addEventListener("click", resetTimer);
 
 tabBtns.forEach(btn => {
   btn.addEventListener("click", () => {
-    tabBtns.forEach(b => b.classList.remove("active"));
+    tabBtns.forEach(b => {
+      b.classList.remove("active");
+      b.setAttribute("aria-selected", "false");
+    });
     tabContents.forEach(c => c.classList.remove("active"));
 
     btn.classList.add("active");
+    btn.setAttribute("aria-selected", "true");
     const activeTabId = `${btn.dataset.tab}-tab`;
     const tabEl = document.getElementById(activeTabId);
     if (tabEl) tabEl.classList.add("active");
 
     // Sync active state in mobile bottom navigation dock
     document.querySelectorAll(".dock-btn").forEach(db => {
-      if (db.dataset.tab === btn.dataset.tab) {
-        db.classList.add("active");
-      } else {
-        db.classList.remove("active");
-      }
+      const isCurrent = db.dataset.tab === btn.dataset.tab;
+      db.classList.toggle("active", isCurrent);
+      db.setAttribute("aria-selected", isCurrent ? "true" : "false");
     });
 
     // Refresh charts and heatmap on tab load
@@ -1077,6 +1160,8 @@ function renderAchievements() {
     badgeDiv.classList.add("badge");
     badgeDiv.classList.add(isUnlocked ? "unlocked" : "locked");
     badgeDiv.classList.add(`rarity-${ach.rarity.toLowerCase()}`);
+    badgeDiv.setAttribute("tabindex", "0");
+    badgeDiv.setAttribute("role", "button");
 
     badgeDiv.textContent = ach.icon;
 
@@ -1090,6 +1175,13 @@ function renderAchievements() {
     // Click to open details modal
     badgeDiv.addEventListener("click", () => {
       openAchievementModal(ach);
+    });
+    
+    badgeDiv.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        openAchievementModal(ach);
+      }
     });
 
     container.appendChild(badgeDiv);
@@ -1135,6 +1227,8 @@ function openAchievementModal(ach) {
 
   overlay.classList.add("active");
   modal.classList.add("active");
+  announce(`Achievement details modal: ${ach.title}. Description: ${ach.desc}. Status: ${isUnlocked ? 'Unlocked' : 'Locked'}.`);
+  enableFocusTrap(modal);
 }
 
 function closeAchievementModal() {
@@ -1142,6 +1236,7 @@ function closeAchievementModal() {
   const modal = document.getElementById("achievementModal");
   if (overlay) overlay.classList.remove("active");
   if (modal) modal.classList.remove("active");
+  disableFocusTrap();
 }
 
 // Attach Achievement Modal Close Event Listeners
@@ -1401,15 +1496,23 @@ function initCategoryChart() {
 
 // Chart toggle click listeners
 document.getElementById("btnWeeklyStudy")?.addEventListener("click", () => {
-  document.getElementById("btnWeeklyStudy").classList.add("active");
-  document.getElementById("btnMonthlyStudy").classList.remove("active");
+  const weekly = document.getElementById("btnWeeklyStudy");
+  const monthly = document.getElementById("btnMonthlyStudy");
+  weekly.classList.add("active");
+  weekly.setAttribute("aria-pressed", "true");
+  monthly.classList.remove("active");
+  monthly.setAttribute("aria-pressed", "false");
   currentStudyView = "weekly";
   initStudyHoursChart();
 });
 
 document.getElementById("btnMonthlyStudy")?.addEventListener("click", () => {
-  document.getElementById("btnMonthlyStudy").classList.add("active");
-  document.getElementById("btnWeeklyStudy").classList.remove("active");
+  const weekly = document.getElementById("btnWeeklyStudy");
+  const monthly = document.getElementById("btnMonthlyStudy");
+  monthly.classList.add("active");
+  monthly.setAttribute("aria-pressed", "true");
+  weekly.classList.remove("active");
+  weekly.setAttribute("aria-pressed", "false");
   currentStudyView = "monthly";
   initStudyHoursChart();
 });
@@ -1493,15 +1596,23 @@ function initCompletionTrendChart() {
 
 // Chart toggle click listeners for completion trend
 document.getElementById("btnWeeklyTrend")?.addEventListener("click", () => {
-  document.getElementById("btnWeeklyTrend").classList.add("active");
-  document.getElementById("btnMonthlyTrend").classList.remove("active");
+  const weekly = document.getElementById("btnWeeklyTrend");
+  const monthly = document.getElementById("btnMonthlyTrend");
+  weekly.classList.add("active");
+  weekly.setAttribute("aria-pressed", "true");
+  monthly.classList.remove("active");
+  monthly.setAttribute("aria-pressed", "false");
   completionTrendView = "weekly";
   initCompletionTrendChart();
 });
 
 document.getElementById("btnMonthlyTrend")?.addEventListener("click", () => {
-  document.getElementById("btnMonthlyTrend").classList.add("active");
-  document.getElementById("btnWeeklyTrend").classList.remove("active");
+  const weekly = document.getElementById("btnWeeklyTrend");
+  const monthly = document.getElementById("btnMonthlyTrend");
+  monthly.classList.add("active");
+  monthly.setAttribute("aria-pressed", "true");
+  weekly.classList.remove("active");
+  weekly.setAttribute("aria-pressed", "false");
   completionTrendView = "monthly";
   initCompletionTrendChart();
 });
@@ -1679,9 +1790,11 @@ function toggleSidebar(show) {
   if (show) {
     sidebar.classList.add("open");
     sidebarOverlay.classList.add("active");
+    enableFocusTrap(sidebar);
   } else {
     sidebar.classList.remove("open");
     sidebarOverlay.classList.remove("active");
+    disableFocusTrap();
   }
 }
 
@@ -1706,10 +1819,12 @@ function toggleMobileDrawer(show) {
   if (show) {
     mobileAddDrawer.classList.add("open");
     mobileAddDrawerOverlay.classList.add("active");
+    enableFocusTrap(mobileAddDrawer);
     setTimeout(() => mobileTaskInput.focus(), 150); // Auto-focus on drawer slide up
   } else {
     mobileAddDrawer.classList.remove("open");
     mobileAddDrawerOverlay.classList.remove("active");
+    disableFocusTrap();
   }
 }
 
@@ -1731,7 +1846,16 @@ if (mobileAddTaskBtn) {
     const mobilePrioritySelect = document.getElementById("mobilePrioritySelect");
     const priority = mobilePrioritySelect ? mobilePrioritySelect.value : "Medium";
 
-    if (text === "") return;
+    if (text === "") {
+      mobileTaskInput.classList.add("input-invalid");
+      mobileTaskInput.setAttribute("aria-invalid", "true");
+      announce("Failed to add task. Please enter a task description.");
+      setTimeout(() => {
+        mobileTaskInput.classList.remove("input-invalid");
+      }, 400);
+      return;
+    }
+    mobileTaskInput.setAttribute("aria-invalid", "false");
 
     const task = {
       id: Date.now(),
@@ -1753,6 +1877,7 @@ if (mobileAddTaskBtn) {
     saveData();
     renderTasks();
     toggleMobileDrawer(false); // Hide overlay
+    announce(`Task added: "${text}". Category: ${category}, Priority: ${priority}.`);
   });
 }
 
@@ -1811,8 +1936,12 @@ document.addEventListener("keydown", e => {
 // Filter Button routers
 filterBtns.forEach(btn => {
   btn.addEventListener("click", () => {
-    filterBtns.forEach(b => b.classList.remove("active"));
+    filterBtns.forEach(b => {
+      b.classList.remove("active");
+      b.setAttribute("aria-pressed", "false");
+    });
     btn.classList.add("active");
+    btn.setAttribute("aria-pressed", "true");
     currentFilter = btn.dataset.filter;
     renderTasks();
   });
