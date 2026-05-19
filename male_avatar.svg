@@ -15,7 +15,7 @@
   </defs>
   
   <!-- Outer circle with border -->
-  <circle cx="50" cy="50" r="48" fill="url(#bgGrad)" stroke="url(#neonGlow)" stroke-width="2" />
+  <circle cx="50" cy="50" r="48" fill="transparent" stroke="url(#neonGlow)" stroke-width="2" />
   
   <!-- Back lights/glow -->
   <circle cx="50" cy="40" r="25" fill="#3b82f6" opacity="0.15" filter="blur(5px)" />
