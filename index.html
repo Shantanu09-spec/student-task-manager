@@ -126,6 +126,7 @@
       </div>
 
     </aside>
+    <!-- MAIN CONTENT REMOVED DUPLICATE HEADER -->
 
     <!-- MAIN CONTENT -->
     <section class="main-content">
@@ -158,6 +159,10 @@
       <!-- TOP BAR -->
       <div class="topbar">
         <div class="topbar-left">
+
+          <h2>Dashboard</h2>
+          <p>Conquer your goals one task at a time ✨</p>
+
           <button class="burger-btn" id="mobileSidebarToggle" aria-label="Toggle Sidebar Menu">
             <i class="ri-menu-line"></i>
           </button>
@@ -165,6 +170,7 @@
             <h2>Dashboard</h2>
             <p>Conquer your goals one task at a time ✨</p>
           </div>
+
         </div>
 
         <div class="topbar-right">
@@ -209,6 +215,13 @@
                 <option value="Practical">🧪 Practical</option>
                 <option value="Assignment">📝 Assignment</option>
                 <option value="Revision">📖 Revision</option>
+              </select>
+
+
+              <select id="prioritySelect" title="Select priority level">
+                <option value="High">🚩 High</option>
+                <option value="Medium" selected>🔸 Medium</option>
+                <option value="Low">🔹 Low</option>
               </select>
 
               <input
@@ -259,6 +272,7 @@
 
             </div>
 
+
             <!-- DAILY QUEST -->
             <div class="daily-quest">
               <div>
@@ -300,6 +314,7 @@
           </div>
         </div>
       </div>
+
       <div id="analytics-tab" class="tab-content hidden">
 
       <div id="analytics-tab" class="tab-content hidden" role="tabpanel" aria-labelledby="tabBtnAnalytics">
@@ -411,8 +426,17 @@
         </div>
 
 
+
       <!-- TAB 2: ANALYTICS HUB -->
       <div id="analytics-tab" class="tab-content hidden">
+
+
+
+      <!-- TAB 2: ANALYTICS HUB -->
+      <div id="analytics-tab" class="tab-content hidden">
+
+        <!-- Consistency Heatmap & Mastery Progress List -->
+
 
         <div class="analytics-heatmap-layout">
           <!-- Github style Heatmap -->
@@ -551,6 +575,11 @@
       </select>
 
       <select id="mobilePrioritySelect" aria-label="Task priority">
+
+        <option value="High">🚩 High Priority</option>
+        <option value="Medium" selected>🔸 Medium Priority</option>
+        <option value="Low">🔹 Low Priority</option>
+
         <option value="High">🔴 High Priority</option>
         <option value="Medium" selected>🟡 Medium Priority</option>
         <option value="Low">🟢 Low Priority</option>
@@ -650,8 +679,16 @@
     </div>
   </div>
 
+
+  <!-- TASK ADDED POPUP -->
+  <div id="taskPopup" class="task-popup glass">
+    <i class="ri-notification-3-line"></i>
+    <p id="taskPopupMessage">COMPLETE TASK ASAP</p>
+  </div>
+
   <!-- ACCESSIBILITY ANNOUNCER -->
   <div id="srAnnouncement" class="sr-only" aria-live="polite"></div>
+
 
   <script src="script.js"></script>
 
@@ -660,5 +697,7 @@
 
 </html>
 
+
 </html>
+
 

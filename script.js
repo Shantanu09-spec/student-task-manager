@@ -509,6 +509,9 @@ function addTask() {
   const text = taskInput.value.trim();
   const category = categorySelect.value;
 
+
+  const priority = document.getElementById("prioritySelect").value;
+
   const deadlineInput = document.getElementById("deadlineInput");
   const deadline = deadlineInput.value;
 
@@ -553,6 +556,14 @@ function addTask() {
   renderTasks();
 
   updateDeadlineAlerts();
+
+
+  // Notify user to complete the new task ASAP
+  sendNotification("Quest Assigned", `COMPLETE ${text} TASK ASAP`);
+
+  // Show UI popup notification
+  showTaskPopup(`COMPLETE ${text.toUpperCase()} TASK ASAP`);
+
 
   announce(`Task added: "${text}". Category: ${category}, Priority: ${priority}.`);
 
@@ -614,7 +625,14 @@ function createTaskEl(task) {
         <div class="check-btn" tabindex="0" aria-label="Toggle completed task"></div>
         <div>
           <h3 class="task-title">${escapeHtml(task.text)}</h3>
+
           <p class="task-category">${getCategoryEmoji(task.category)} ${task.category}</p>
+
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px;">
+            <span class="priority-badge ${(task.priority || 'Medium').toLowerCase()}">${task.priority || 'Medium'}</span>
+            <p class="task-category" style="margin: 0;">${getCategoryEmoji(task.category)} ${task.category}</p>
+          </div>
+
           ${task.deadline ? `<p class="task-deadline ${getDeadlineUrgency(task.deadline)}"><i class="ri-time-line"></i> ${formatDeadlineDisplay(task.deadline)}</p>` : ''}
         </div>
       </div>
@@ -636,6 +654,7 @@ function createTaskEl(task) {
       streak = Math.max(0, streak - 1);
       xp = Math.max(0, xp - 20);
 >>>>>>> main
+
 
       if (analyticsData.completedTasksPerDay[todayStr]) {
         analyticsData.completedTasksPerDay[todayStr] = Math.max(0, analyticsData.completedTasksPerDay[todayStr] - 1);
@@ -1892,6 +1911,13 @@ function updateDeadlineAlerts() {
       alertDiv.classList.add("warning");
     }
 
+
+    // Send browser notification for tasks reaching critical urgency
+    if (urgencyData.urgency === "critical") {
+      sendNotification("Urgent Deadline!", `COMPLETE ${task.text} TASK ASAP`);
+    }
+
+
     const icon = urgencyData.urgency === "critical" ? "ri-alarm-warning-fill" : "ri-time-line";
     
     alertDiv.innerHTML = `
@@ -2001,6 +2027,11 @@ if (mobileAddTaskBtn) {
   mobileAddTaskBtn.addEventListener("click", () => {
     const text = mobileTaskInput.value.trim();
     const category = mobileCategorySelect.value;
+
+    const priority = document.getElementById("mobilePrioritySelect").value;
+
+    if (text === "") return;
+
     const mobilePrioritySelect = document.getElementById("mobilePrioritySelect");
     const priority = mobilePrioritySelect ? mobilePrioritySelect.value : "Medium";
 
@@ -2014,6 +2045,7 @@ if (mobileAddTaskBtn) {
       return;
     }
     mobileTaskInput.setAttribute("aria-invalid", "false");
+
 
     const task = {
       id: Date.now(),
@@ -2034,6 +2066,13 @@ if (mobileAddTaskBtn) {
 
     saveData();
     renderTasks();
+
+    // Notify user to complete the new task ASAP (Mobile)
+    sendNotification("Quest Assigned", `COMPLETE ${text} TASK ASAP`);
+
+    // Show UI popup notification (Mobile)
+    showTaskPopup(`COMPLETE ${text.toUpperCase()} TASK ASAP`);
+
     toggleMobileDrawer(false); // Hide overlay
     announce(`Task added: "${text}". Category: ${category}, Priority: ${priority}.`);
   });
@@ -2131,6 +2170,11 @@ if (sortByDeadlineBtn) {
 
 // Dom Loaded
 document.addEventListener("DOMContentLoaded", () => {
+  // Request browser notification permissions on startup
+  if ("Notification" in window && Notification.permission === "default") {
+    Notification.requestPermission();
+  }
+
   loadData();
   updateGamification();
   renderTasks();
@@ -2185,3 +2229,22 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 });
+
+// Feature: UI Pop-up Notification
+let taskPopupTimeout = null;
+function showTaskPopup(message) {
+  const popup = document.getElementById("taskPopup");
+  const msgText = document.getElementById("taskPopupMessage");
+  if (!popup || !msgText) return;
+  
+  // Clear existing timeout if user adds tasks rapidly
+  if (taskPopupTimeout) clearTimeout(taskPopupTimeout);
+  
+  msgText.textContent = message;
+  popup.classList.add("show");
+  
+  taskPopupTimeout = setTimeout(() => {
+    popup.classList.remove("show");
+    taskPopupTimeout = null;
+  }, 4000);
+}
