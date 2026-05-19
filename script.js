@@ -526,6 +526,7 @@ function addTask() {
   const category = categorySelect.value;
 
 
+
   const priority = document.getElementById("prioritySelect").value;
 
   const deadlineInput = document.getElementById("deadlineInput");
@@ -637,6 +638,7 @@ function createTaskEl(task) {
       coins += 10;
       streak += 1;
       xp += 20;
+
 
 
     div.innerHTML = `
