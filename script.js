@@ -2213,6 +2213,20 @@ sortBtns.forEach(btn => {
   });
 });
 
+// Logic to clear all tasks at once
+const resetTasksBtn = document.getElementById("resetTasksBtn");
+if (resetTasksBtn) {
+  resetTasksBtn.addEventListener("click", () => {
+    if (confirm("Are you sure you want to clear all quests? This action cannot be undone.")) {
+      tasks = [];
+      saveData();
+      renderTasks();
+      updateGamification();
+      announce("All tasks have been cleared successfully.");
+    }
+  });
+}
+
 // Theme selection dot selectors click listeners
 document.querySelectorAll(".theme-dot").forEach(dot => {
   dot.addEventListener("click", () => {

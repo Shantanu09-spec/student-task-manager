@@ -1023,6 +1023,16 @@ body.light .topbar-left h2 {
   box-shadow: var(--shadow-sm);
 }
 
+.filter-btn.reset-btn {
+  border-color: var(--danger) !important;
+  color: var(--danger) !important;
+}
+
+.filter-btn.reset-btn:hover {
+  background: var(--danger) !important;
+  color: white !important;
+}
+
 /* DAILY QUEST */
 
 .daily-quest {
