@@ -3,6 +3,27 @@ const taskInput = document.getElementById("taskInput");
 const addTaskBtn = document.getElementById("addTaskBtn");
 const taskList = document.getElementById("taskList");
 const categorySelect = document.getElementById("categorySelect");
+const taskTemplate = document.getElementById("taskTemplate");
+
+// Quick templates: populate input/category/priority when a template is chosen
+if (taskTemplate) {
+  taskTemplate.addEventListener("change", () => {
+    const val = taskTemplate.value;
+    if (!val) return;
+    try {
+      const obj = JSON.parse(val);
+      taskInput.value = obj.text || "";
+      if (obj.category && categorySelect) categorySelect.value = obj.category;
+      const prioritySelect = document.getElementById("prioritySelect");
+      if (prioritySelect && obj.priority) prioritySelect.value = obj.priority;
+      taskInput.focus();
+      // Reset template selector for next use
+      taskTemplate.value = "";
+    } catch (e) {
+      console.error("Invalid template JSON", e);
+    }
+  });
+}
 
 // Sidebar metrics elements
 const totalTasks = document.getElementById("totalTasks");
@@ -20,10 +41,18 @@ const sortBtns = document.querySelectorAll(".filters .filter-btn[data-sort]");
 
 // Global states (Removed duplicates)
 let tasks = [];
+let exams = [];
+let vaultFiles = [];
+let projects = [];
 let currentFilter = "All";
 let currentSort = "default";
 let searchQuery = "";
 let currentView = "list";
+let performanceData = [];
+let timetable = [];
+let calendarEvents = [];
+let subjects = [];
+let currentCalendarDate = new Date();
 let coins = 0;
 let streak = 0;
 let xp = 120;
@@ -176,8 +205,44 @@ function loadData() {
   if (savedTasks) {
     try {
       tasks = JSON.parse(savedTasks);
+      // Ensure all loaded tasks have the penaltyApplied property
+      tasks.forEach(task => {
+        if (task.penaltyApplied === undefined) {
+          task.penaltyApplied = false;
+        }
+      });
     } catch (e) {
       tasks = [];
+    }
+  }
+
+  // Load exams
+  const savedExams = localStorage.getItem("quests_exams");
+  if (savedExams) {
+    try {
+      exams = JSON.parse(savedExams);
+    } catch (e) {
+      exams = [];
+    }
+  }
+
+  // Load vault files
+  const savedVault = localStorage.getItem("quests_vault");
+  if (savedVault) {
+    try {
+      vaultFiles = JSON.parse(savedVault);
+    } catch (e) {
+      vaultFiles = [];
+    }
+  }
+
+  // Load projects
+  const savedProjects = localStorage.getItem("quests_projects");
+  if (savedProjects) {
+    try {
+      projects = JSON.parse(savedProjects);
+    } catch (e) {
+      projects = [];
     }
   }
 
@@ -215,15 +280,52 @@ function loadData() {
       profile = { name: "Student Hero", gender: "Male", class: "Class 10", title: "Focus Warrior ⚔️", photo: null };
     }
   }
+
+  // Load Performance Data
+  const savedPerformance = localStorage.getItem("quests_performance");
+  if (savedPerformance) {
+    try {
+      performanceData = JSON.parse(savedPerformance);
+    } catch (e) {
+      performanceData = [];
+    }
+  }
+
+  // Load Timetable
+  const savedTimetable = localStorage.getItem("quests_timetable");
+  if (savedTimetable) {
+    try {
+      timetable = JSON.parse(savedTimetable);
+    } catch (e) {
+      timetable = [];
+    }
+  }
+
+  // Load Subjects
+  const savedSubjects = localStorage.getItem("quests_subjects");
+  if (savedSubjects) {
+    try {
+      subjects = JSON.parse(savedSubjects);
+    } catch (e) {
+      subjects = [];
+    }
+  }
 }
 
 function saveData() {
   localStorage.setItem("quests", JSON.stringify(tasks));
+  localStorage.setItem("quests_exams", JSON.stringify(exams));
+  localStorage.setItem("quests_vault", JSON.stringify(vaultFiles));
+  localStorage.setItem("quests_projects", JSON.stringify(projects));
   localStorage.setItem("coins", coins);
   localStorage.setItem("streak", streak);
   localStorage.setItem("xp", xp);
   localStorage.setItem("quests_analytics", JSON.stringify(analyticsData));
   localStorage.setItem("quests_profile", JSON.stringify(profile));
+  localStorage.setItem("quests_performance", JSON.stringify(performanceData));
+  localStorage.setItem("quests_timetable", JSON.stringify(timetable));
+  localStorage.setItem("quests_subjects", JSON.stringify(subjects));
+  localStorage.setItem("quests_calendar", JSON.stringify(calendarEvents));
 }
 
 // Generate beautiful visual mock data for past 15 days if empty
@@ -560,7 +662,8 @@ function addTask() {
     priority,
     completed: false,
     createdAt: getFormattedDateTime(new Date()),
-    deadline: deadline || null
+    deadline: deadline || null,
+    penaltyApplied: false
   };
 
   tasks.push(task);
@@ -630,20 +733,31 @@ function createTaskEl(task) {
   checkBtn.setAttribute("role", "checkbox");
   checkBtn.setAttribute("aria-checked", task.completed ? "true" : "false");
 
-  const handleToggle = () => {
+  const handleToggle = (e) => {
     const oldXp = xp;
     task.completed = !task.completed;
     checkBtn.setAttribute("aria-checked", task.completed ? "true" : "false");
     const todayStr = getFormattedDate(new Date());
 
     if (task.completed) {
-      coins += 10;
+      // Dynamic rewards based on priority
+      let coinReward = 10;
+      let xpReward = 20;
+      if (task.priority === "High") { coinReward = 30; xpReward = 60; }
+      else if (task.priority === "Medium") { coinReward = 20; xpReward = 40; }
+
+      coins += coinReward;
       streak += 1;
-      xp += 20;
+      xp += xpReward;
 
       analyticsData.completedTasksPerDay[todayStr] = (analyticsData.completedTasksPerDay[todayStr] || 0) + 1;
       analyticsData.categoryStats[task.category].completed = (analyticsData.categoryStats[task.category].completed || 0) + 1;
       updateAnalyticsStreak(todayStr);
+
+      // Visual Feedback and Rewards
+      triggerConfetti();
+      if (e) triggerCoinExplosion(e);
+      showTaskPopup(`QUEST CONQUERED! Gained +${coinReward} Coins & +${xpReward} XP 🏆`);
     } else {
       coins = Math.max(0, coins - 10);
       streak = Math.max(0, streak - 1);
@@ -667,11 +781,11 @@ function createTaskEl(task) {
     renderWeeklyStreak();
   };
 
-  checkBtn.addEventListener("click", handleToggle);
+  checkBtn.addEventListener("click", (e) => handleToggle(e));
   checkBtn.addEventListener("keydown", e => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      handleToggle();
+      handleToggle(e);
     }
   });
 
@@ -1003,6 +1117,302 @@ function updateDailyQuest() {
   }
 }
 
+// ==========================================================================
+// PERFORMANCE MANAGEMENT SYSTEM
+// ==========================================================================
+
+function renderPerformance() {
+  const container = document.getElementById("performanceGrid");
+  const statsContainer = document.getElementById("overallPerformanceStats");
+  if (!container) return;
+  
+  container.innerHTML = "";
+
+  if (performanceData.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <i class="ri-medal-line"></i>
+        <h3>No Records Found</h3>
+        <p>Add your subjects and marks to visualize your academic progress.</p>
+      </div>
+    `;
+    if (statsContainer) statsContainer.innerHTML = "";
+    return;
+  }
+
+  let totalPercentage = 0;
+
+  performanceData.forEach(item => {
+    totalPercentage += item.percentage;
+    let msg = "";
+    let statusClass = "";
+
+    if (item.percentage < 45) {
+      msg = "No worry perform better next time";
+      statusClass = "low";
+    } else if (item.percentage < 80) {
+      msg = "try to go higher";
+      statusClass = "medium";
+    } else {
+      msg = "you are on right track go ahead champ";
+      statusClass = "high";
+    }
+
+    const card = document.createElement("div");
+    card.className = "performance-card glass";
+    card.innerHTML = `
+      <div class="perf-header">
+        <div class="perf-info">
+          <span class="perf-subject">${escapeHtml(item.name)}</span>
+          <p class="perf-marks">${item.obtained} / ${item.total} Marks</p>
+        </div>
+        <button class="icon-btn delete-btn" style="width: 32px; height: 32px;" onclick="deletePerformance(${item.id})">
+          <i class="ri-delete-bin-line"></i>
+        </button>
+      </div>
+      <div class="perf-body">
+        <span class="perf-percent ${statusClass}">${item.percentage.toFixed(1)}%</span>
+        <div class="perf-progress-container">
+          <div class="perf-progress-fill ${statusClass}" style="width: ${item.percentage}%"></div>
+        </div>
+        <p class="perf-msg ${statusClass}">${msg}</p>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+
+  // Render Average Summary
+  if (statsContainer) {
+    const avg = totalPercentage / performanceData.length;
+    statsContainer.innerHTML = `
+      <div class="storage-bar"><div class="storage-fill" style="width: ${avg}%"></div></div>
+      <p id="storageText">Overall Academic Standing: <strong>${avg.toFixed(1)}%</strong></p>
+    `;
+  }
+}
+
+window.deletePerformance = (id) => {
+  if (confirm("Delete this academic record?")) {
+    performanceData = performanceData.filter(p => p.id !== id);
+    saveData();
+    renderPerformance();
+    announce("Record deleted.");
+    showTaskPopup("RECORD REMOVED");
+  }
+}
+
+// ==========================================================================
+// SMART TIMETABLE SYSTEM
+// ==========================================================================
+
+function renderTimetable() {
+  const container = document.getElementById("timetableGrid");
+  if (!container) return;
+  container.innerHTML = "";
+
+  if (timetable.length === 0) {
+    container.innerHTML = `<div class="empty-state"><i class="ri-calendar-line"></i><h3>No Schedule Set</h3><p>Start planning your week by adding study slots above.</p></div>`;
+    return;
+  }
+
+  const now = new Date();
+  const dayNamesShort = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const currentDay = dayNamesShort[now.getDay()];
+  const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+  const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  
+  dayNames.forEach(day => {
+    const daySlots = timetable.filter(s => s.day === day).sort((a, b) => a.startTime.localeCompare(b.startTime));
+    if (daySlots.length === 0) return;
+
+    const dayCard = document.createElement("div");
+    dayCard.className = "timetable-day-card";
+    dayCard.innerHTML = `<div class="timetable-day-header"><i class="ri-calendar-event-line"></i> ${day}</div>`;
+    
+    const slotsList = document.createElement("div");
+    slotsList.className = "tt-slots-list";
+    slotsList.style.display = "flex";
+    slotsList.style.flexDirection = "column";
+    slotsList.style.gap = "10px";
+
+    daySlots.forEach(slot => {
+      const isCurrent = slot.day === currentDay && currentTime >= slot.startTime && currentTime < slot.endTime;
+      const slotEl = document.createElement("div");
+      slotEl.className = `tt-slot ${isCurrent ? 'active-slot' : ''}`;
+      slotEl.innerHTML = `
+        <div class="tt-slot-info">
+          <h4>${escapeHtml(slot.subject)} ${isCurrent ? '<span class="active-indicator">NOW STUDYING</span>' : ''}</h4>
+          <p><i class="ri-time-line"></i> ${slot.startTime} - ${slot.endTime}</p>
+        </div>
+        <button class="icon-btn tt-delete-btn" onclick="deleteTimetableSlot(${slot.id})">
+          <i class="ri-delete-bin-line"></i>
+        </button>
+      `;
+      slotsList.appendChild(slotEl);
+    });
+
+    dayCard.appendChild(slotsList);
+    container.appendChild(dayCard);
+  });
+}
+
+window.deleteTimetableSlot = (id) => {
+  if (confirm("Remove this study slot?")) {
+    timetable = timetable.filter(s => s.id !== id);
+    saveData();
+    renderTimetable();
+    showTaskPopup("SCHEDULE UPDATED");
+  }
+};
+
+function initTimetableNotifier() {
+  setInterval(() => {
+    const now = new Date();
+    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const currentDay = dayNames[now.getDay()];
+    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    // 5-minute early warning logic
+    const fiveMinsLater = new Date(now.getTime() + 5 * 60000);
+    const upcomingTime = `${String(fiveMinsLater.getHours()).padStart(2, '0')}:${String(fiveMinsLater.getMinutes()).padStart(2, '0')}`;
+
+    let dataUpdated = false;
+
+    timetable.forEach(slot => {
+      // Alert 1: Session Starting NOW
+      if (slot.day === currentDay && slot.startTime === currentTime) {
+        if (slot.lastNotified !== currentTime) {
+          const msg = `IT'S TIME FOR ${slot.subject.toUpperCase()} SESSION!`;
+          showTaskPopup(msg);
+          sendNotification("Study Time! 📚", `Your scheduled ${slot.subject} session starts now.`);
+          slot.lastNotified = currentTime;
+          dataUpdated = true;
+          
+          // Play a gentle alert sound if browser allows
+          try {
+            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+            audio.volume = 0.4;
+            audio.play();
+          } catch(e) {}
+        }
+      }
+      
+      // Alert 2: Session Starting in 5 Minutes (Upcoming)
+      if (slot.day === currentDay && slot.startTime === upcomingTime) {
+        const upcomingKey = `warn_${upcomingTime}`;
+        if (slot.lastNotified !== upcomingKey) {
+          showTaskPopup(`UPCOMING: ${slot.subject.toUpperCase()} IN 5 MINS`);
+          slot.lastNotified = upcomingKey;
+          dataUpdated = true;
+        }
+      }
+      
+      // Reset lastNotified after a minute passes
+      if (slot.lastNotified && slot.lastNotified !== currentTime && !slot.lastNotified.startsWith('warn_')) {
+        slot.lastNotified = null;
+        dataUpdated = true;
+      }
+    });
+
+    if (dataUpdated) {
+      saveData();
+      renderTimetable(); // Refresh to show "NOW STUDYING" badge
+    }
+  }, 30000); // Check every 30 seconds
+}
+
+// ==========================================================================
+// INTERACTIVE CALENDAR SYSTEM
+// ==========================================================================
+
+function renderCalendar() {
+  const grid = document.getElementById("calendarGrid");
+  const monthYearLabel = document.getElementById("currentMonthYear");
+  if (!grid) return;
+
+  grid.innerHTML = "";
+  const year = currentCalendarDate.getFullYear();
+  const month = currentCalendarDate.getMonth();
+  
+  monthYearLabel.textContent = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(currentCalendarDate);
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  
+  // Fill previous month trailing days
+  const prevMonthDays = new Date(year, month, 0).getDate();
+  for (let i = firstDay - 1; i >= 0; i--) {
+    const dayDiv = document.createElement("div");
+    dayDiv.className = "calendar-day other-month";
+    dayDiv.innerHTML = `<span class="day-number">${prevMonthDays - i}</span>`;
+    grid.appendChild(dayDiv);
+  }
+
+  // Current month days
+  const today = new Date();
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dayDiv = document.createElement("div");
+    dayDiv.className = "calendar-day";
+    if (year === today.getFullYear() && month === today.getMonth() && d === today.getDate()) {
+      dayDiv.classList.add("today");
+    }
+
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const dayEvents = calendarEvents.filter(e => e.date === dateStr);
+
+    dayDiv.innerHTML = `<span class="day-number">${d}</span>`;
+    dayEvents.forEach(e => {
+      const eDiv = document.createElement("div");
+      eDiv.className = "event-pill-mini";
+      eDiv.textContent = e.title;
+      dayDiv.appendChild(eDiv);
+    });
+
+    dayDiv.onclick = () => {
+      document.getElementById("eventDateInput").value = dateStr;
+      document.getElementById("eventTitleInput").focus();
+    };
+
+    grid.appendChild(dayDiv);
+  }
+}
+
+function initCalendarNotifier() {
+  setInterval(() => {
+    const now = new Date();
+    const dateStr = getFormattedDate(now);
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    let changed = false;
+    calendarEvents.forEach(ev => {
+      if (ev.date === dateStr && ev.time === timeStr && ev.lastNotified !== timeStr) {
+        showTaskPopup(`CALENDAR: ${ev.title.toUpperCase()}`);
+        sendNotification("Event Reminder 📅", `Starting now: ${ev.title}`);
+        ev.lastNotified = timeStr;
+        changed = true;
+        
+        try {
+          const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+          audio.volume = 0.5;
+          audio.play();
+        } catch(e) {}
+      }
+
+      // Cleanup notification flag
+      if (ev.lastNotified && (ev.date !== dateStr || ev.time !== timeStr)) {
+        ev.lastNotified = null;
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      saveData();
+      renderCalendar();
+    }
+  }, 30000);
+}
+
 function updateAnalyticsStreak(todayStr) {
   if (analyticsData.lastActiveDate === todayStr) return;
 
@@ -1206,6 +1616,9 @@ tabBtns.forEach(btn => {
     // Refresh charts and heatmap on tab load
     if (btn.dataset.tab === "analytics") {
       updateAnalyticsDashboard();
+    }
+    if (btn.dataset.tab === "subject-tracker") {
+      renderSubjectTracker();
     }
 
     // Re-render assignments on tab activation
@@ -1993,10 +2406,41 @@ function sortByDeadline() {
   renderTasks();
 }
 
+/**
+ * Automatically deducts 10 points (coins) for tasks that pass their deadline 
+ * without being completed.
+ */
+function checkOverduePenalties() {
+  const now = Date.now();
+  let changed = false;
+
+  tasks.forEach(task => {
+    // Only penalize if it has a deadline, isn't done, and hasn't been penalized yet
+    if (task.deadline && !task.completed && !task.penaltyApplied) {
+      const deadlineTime = new Date(task.deadline).getTime();
+      
+      if (now > deadlineTime) {
+        coins = Math.max(0, coins - 10);
+        task.penaltyApplied = true;
+        changed = true;
+        
+        showTaskPopup(`DEADLINE MISSED: -10 PTS FOR "${task.text.toUpperCase()}"`);
+        announce(`Deadline missed for task ${task.text}. 10 points deducted.`);
+      }
+    }
+  });
+
+  if (changed) {
+    saveData();
+    updateGamification();
+  }
+}
+
 // Initialize deadline update interval
 function initDeadlineUpdater() {
   updateDeadlineAlerts();
   setInterval(() => {
+    checkOverduePenalties();
     updateDeadlineAlerts();
     renderTasks();
   }, 60000); // Update every minute
@@ -2074,6 +2518,9 @@ if (mobileAddTaskBtn) {
     const mobilePrioritySelect = document.getElementById("mobilePrioritySelect");
     const priority = mobilePrioritySelect ? mobilePrioritySelect.value : "Medium";
 
+    const mobileDeadlineInput = document.getElementById("mobileDeadlineInput");
+    const deadline = mobileDeadlineInput ? mobileDeadlineInput.value : "";
+
     if (text === "") {
       mobileTaskInput.classList.add("input-invalid");
       mobileTaskInput.setAttribute("aria-invalid", "true");
@@ -2092,11 +2539,14 @@ if (mobileAddTaskBtn) {
       category,
       priority,
       completed: false,
-      createdAt: getFormattedDateTime(new Date())
+      createdAt: getFormattedDateTime(new Date()),
+      deadline: deadline || null,
+      penaltyApplied: false
     };
 
     tasks.push(task);
     mobileTaskInput.value = "";
+    if (mobileDeadlineInput) mobileDeadlineInput.value = "";
 
     if (!analyticsData.categoryStats[category]) {
       analyticsData.categoryStats[category] = { created: 0, completed: 0 };
@@ -2257,8 +2707,29 @@ document.addEventListener("DOMContentLoaded", () => {
   renderAchievements();
   renderWeeklyStreak();
   updateDisplay();
+  renderPerformance();
+  renderTimetable();
+  renderCalendar();
   renderProfile();
+  renderSubjectTracker();
 
+  // Footer: set dynamic year and small accessibility tweaks
+  const footerCopyright = document.getElementById('footerCopyright');
+  if (footerCopyright) {
+    const year = new Date().getFullYear();
+    footerCopyright.innerHTML = `&copy; ${year} TaskQuest. All rights reserved.`;
+  }
+
+  // Ensure social links have titles for hover/tooltip
+  document.querySelectorAll('.footer-links a').forEach(a => {
+    if (!a.getAttribute('title')) {
+      a.setAttribute('title', a.getAttribute('aria-label') || 'External link');
+    }
+  });
+
+  checkOverduePenalties();
+  initTimetableNotifier();
+  initCalendarNotifier();
   initDeadlineUpdater();
 
 
@@ -2302,6 +2773,143 @@ document.addEventListener("DOMContentLoaded", () => {
       boardViewBtn.classList.add("active");
       listViewBtn.classList.remove("active");
       renderTasks();
+    });
+  }
+
+  // Performance Add Logic
+  const addPerformanceBtn = document.getElementById("addPerformanceBtn");
+  if (addPerformanceBtn) {
+    addPerformanceBtn.addEventListener("click", () => {
+      const name = document.getElementById("subjectNameInput").value.trim();
+      const obtained = parseFloat(document.getElementById("marksObtainedInput").value);
+      const total = parseFloat(document.getElementById("totalMarksInput").value);
+
+      if (!name || isNaN(obtained) || isNaN(total) || total <= 0) {
+        showTaskPopup("INVALID MARKS ENTERED");
+        return;
+      }
+
+      const record = {
+        id: Date.now(),
+        name,
+        obtained,
+        total,
+        percentage: (obtained / total) * 100
+      };
+
+      performanceData.push(record);
+      saveData();
+      renderPerformance();
+      showTaskPopup(`${name.toUpperCase()} PERFORMANCE ADDED`);
+      
+      document.getElementById("subjectNameInput").value = "";
+      document.getElementById("marksObtainedInput").value = "";
+      document.getElementById("totalMarksInput").value = "";
+    });
+  }
+
+  // Timetable Add Logic
+  const addTimetableBtn = document.getElementById("addTimetableBtn");
+  if (addTimetableBtn) {
+    addTimetableBtn.addEventListener("click", () => {
+      const day = document.getElementById("ttDayInput").value;
+      const subject = document.getElementById("ttSubjectInput").value.trim();
+      const start = document.getElementById("ttStartTimeInput").value;
+      const end = document.getElementById("ttEndTimeInput").value;
+
+      if (!subject || !start || !end) {
+        showTaskPopup("PLEASE FILL ALL FIELDS");
+        return;
+      }
+
+      if (start >= end) {
+        showTaskPopup("END TIME MUST BE AFTER START TIME");
+        return;
+      }
+
+      timetable.push({
+        id: Date.now(),
+        day, subject, startTime: start, endTime: end,
+        lastNotified: null
+      });
+
+      saveData();
+      renderTimetable();
+      showTaskPopup("TIMETABLE UPDATED");
+      document.getElementById("ttSubjectInput").value = "";
+    });
+  }
+
+  // Calendar Logic
+  document.getElementById("prevMonth")?.addEventListener("click", () => {
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+    renderCalendar();
+  });
+  document.getElementById("nextMonth")?.addEventListener("click", () => {
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+    renderCalendar();
+  });
+
+  document.getElementById("addEventBtn")?.addEventListener("click", () => {
+    const title = document.getElementById("eventTitleInput").value.trim();
+    const date = document.getElementById("eventDateInput").value;
+    const time = document.getElementById("eventTimeInput").value;
+
+    if (!title || !date || !time) {
+      showTaskPopup("PLEASE FILL ALL EVENT DETAILS");
+      return;
+    }
+
+    calendarEvents.push({ id: Date.now(), title, date, time, lastNotified: null });
+    saveData();
+    renderCalendar();
+    showTaskPopup("EVENT ADDED TO CALENDAR");
+    
+    document.getElementById("eventTitleInput").value = "";
+    document.getElementById("eventDateInput").value = "";
+    document.getElementById("eventTimeInput").value = "";
+  });
+
+  // Subject Tracker Logic
+  const addSubjectBtn = document.getElementById("addSubjectBtn");
+  const subjectForm = document.getElementById("subjectInputForm");
+  const titleInput = document.getElementById("newSubjectTitleInput");
+  const completedInput = document.getElementById("newSubjectCompletedInput");
+  const totalInput = document.getElementById("newSubjectTotalInput");
+
+  if (addSubjectBtn && subjectForm) {
+    addSubjectBtn.addEventListener("click", () => {
+      subjectForm.style.display = subjectForm.style.display === "none" ? "grid" : "none";
+      if (subjectForm.style.display === "grid") titleInput.focus();
+    });
+    document.getElementById("cancelSubjectBtn").addEventListener("click", () => {
+      subjectForm.style.display = "none";
+    });
+    
+    document.getElementById("saveSubjectBtn").addEventListener("click", () => {
+      const title = titleInput.value.trim();
+      const completed = parseInt(completedInput.value) || 0;
+      const total = parseInt(totalInput.value) || 1;
+
+      if (title) {
+        subjects.push({ 
+          id: Date.now(), 
+          title, 
+          completed: Math.max(0, completed), 
+          total: Math.max(1, total) 
+        });
+        saveData();
+        renderSubjectTracker();
+        titleInput.value = "";
+        completedInput.value = "";
+        totalInput.value = "";
+        subjectForm.style.display = "none";
+        showTaskPopup("SUBJECT CREATED");
+      }
+    });
+
+    titleInput.addEventListener("keyup", (e) => {
+      if (e.key === "Enter") document.getElementById("saveSubjectBtn").click();
     });
   }
 
@@ -2354,6 +2962,37 @@ document.getElementById("profileCard")?.addEventListener("click", () => {
   const photoInput = document.getElementById("profileInputPhoto");
   if (photoInput) {
     photoInput.value = "";
+  }
+
+  // Initialize avatar options and select current
+  const avatarOptions = document.getElementById('avatarOptions');
+  if (avatarOptions) {
+    // Mark selected if profile.photo matches one of the options
+    const imgs = avatarOptions.querySelectorAll('.avatar-option');
+    imgs.forEach(img => {
+      img.classList.remove('selected');
+      if (profile.photo && profile.photo.endsWith && profile.photo === img.dataset.src) {
+        img.classList.add('selected');
+      }
+
+      img.onclick = () => {
+        // Clear any uploaded file input
+        if (photoInput) photoInput.value = '';
+        // Set profile.photo to the selected avatar path
+        profile.photo = img.dataset.src;
+        // Update selection UI
+        imgs.forEach(i => i.classList.remove('selected'));
+        img.classList.add('selected');
+        // Update preview in the sidebar immediately
+        const avatarImg = document.getElementById('profileAvatarImg');
+        const avatarPlaceholder = document.getElementById('profileIconPlaceholder');
+        if (avatarImg) {
+          avatarImg.src = profile.photo;
+          avatarImg.style.display = 'block';
+        }
+        if (avatarPlaceholder) avatarPlaceholder.style.display = 'none';
+      };
+    });
   }
 
   overlay.classList.add("active");
@@ -2463,4 +3102,693 @@ function showTaskPopup(message) {
     popup.classList.remove("show");
     setTimeout(() => popup.remove(), 600);
   }, 3500);
+}
+
+// ==========================================================================
+// 8. EXAM COUNTDOWN FEATURE
+// ==========================================================================
+
+const examFormToggle = document.getElementById("examFormToggle");
+const examFormBody = document.getElementById("examFormBody");
+const addExamBtn = document.getElementById("addExamBtn");
+const examsGrid = document.getElementById("examsGrid");
+const examEmptyState = document.getElementById("examEmptyState");
+
+let examTimerInterval = null;
+const notifiedExams = new Set(); // Keep track of exams we already notified for in this session
+
+if (examFormToggle) {
+  examFormToggle.addEventListener("click", () => {
+    examFormBody.classList.toggle("collapsed");
+    const icon = examFormToggle.querySelector("i");
+    if (examFormBody.classList.contains("collapsed")) {
+      icon.classList.replace("ri-subtract-line", "ri-add-line");
+    } else {
+      icon.classList.replace("ri-add-line", "ri-subtract-line");
+    }
+  });
+}
+
+if (addExamBtn) {
+  addExamBtn.addEventListener("click", () => {
+    const title = document.getElementById("examTitle").value.trim();
+    const subject = document.getElementById("examSubject").value.trim();
+    const dateStr = document.getElementById("examDate").value;
+    const notes = document.getElementById("examNotes").value.trim();
+
+    if (!title || !subject || !dateStr) {
+      announce("Please fill in Title, Subject, and Date to add an exam.");
+      showTaskPopup("Missing exam details! 🚨");
+      return;
+    }
+
+    const exam = {
+      id: Date.now(),
+      title,
+      subject,
+      date: new Date(dateStr).getTime(),
+      notes,
+      createdAt: Date.now()
+    };
+
+    exams.push(exam);
+    // Sort exams chronologically
+    exams.sort((a, b) => a.date - b.date);
+
+    saveData();
+    renderExams();
+    announce(`Added exam: ${title}`);
+
+    // Clear form
+    document.getElementById("examTitle").value = "";
+    document.getElementById("examSubject").value = "";
+    document.getElementById("examDate").value = "";
+    document.getElementById("examNotes").value = "";
+
+    // Collapse form
+    examFormBody.classList.add("collapsed");
+    examFormToggle.querySelector("i").classList.replace("ri-subtract-line", "ri-add-line");
+  });
+}
+
+function deleteExam(id) {
+  exams = exams.filter(e => e.id !== id);
+  saveData();
+  renderExams();
+}
+
+function updateExamsCountdown() {
+  const cards = examsGrid.querySelectorAll(".exam-card");
+  const now = Date.now();
+
+  cards.forEach(card => {
+    const examId = parseInt(card.dataset.id);
+    const exam = exams.find(e => e.id === examId);
+    if (!exam) return;
+
+    const timeDiff = exam.date - now;
+    
+    const dEl = card.querySelector(".cd-d");
+    const hEl = card.querySelector(".cd-h");
+    const mEl = card.querySelector(".cd-m");
+    const sEl = card.querySelector(".cd-s");
+
+    if (timeDiff <= 0) {
+      dEl.textContent = "00";
+      hEl.textContent = "00";
+      mEl.textContent = "00";
+      sEl.textContent = "00";
+      card.className = "exam-card urgency-red"; // Completed or missed
+      return;
+    }
+
+    // Time calculations
+    const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((timeDiff / (1000 * 60 * 60)) % 24);
+    const minutes = Math.floor((timeDiff / 1000 / 60) % 60);
+    const seconds = Math.floor((timeDiff / 1000) % 60);
+
+    dEl.textContent = String(days).padStart(2, "0");
+    hEl.textContent = String(hours).padStart(2, "0");
+    mEl.textContent = String(minutes).padStart(2, "0");
+    sEl.textContent = String(seconds).padStart(2, "0");
+
+    // Dynamic Urgency Coloring & Progress Bar
+    const totalDuration = exam.date - exam.createdAt;
+    let progressPercent = totalDuration > 0 ? ((now - exam.createdAt) / totalDuration) * 100 : 100;
+    progressPercent = Math.max(0, Math.min(100, progressPercent)); // clamp 0-100
+
+    const progressFill = card.querySelector(".exam-progress-fill");
+    if (progressFill) progressFill.style.width = `${progressPercent}%`;
+
+    let urgencyClass = "urgency-green";
+    if (timeDiff < 24 * 60 * 60 * 1000) {
+      urgencyClass = "urgency-red";
+      // Trigger notification once if < 24h
+      if (!notifiedExams.has(exam.id)) {
+        sendNotification("Urgent Exam!", `${exam.title} is in less than 24 hours!`);
+        notifiedExams.add(exam.id);
+      }
+    } else if (timeDiff < 3 * 24 * 60 * 60 * 1000) {
+      urgencyClass = "urgency-orange";
+    }
+
+    // Update class efficiently
+    card.className = `exam-card ${urgencyClass}`;
+  });
+}
+
+function renderExams() {
+  if (!examsGrid) return;
+
+  // Clear existing interval if any
+  if (examTimerInterval) clearInterval(examTimerInterval);
+
+  // Clear grid (keep empty state)
+  const existingCards = examsGrid.querySelectorAll(".exam-card");
+  existingCards.forEach(c => c.remove());
+
+  // Show/hide empty state
+  if (exams.length === 0) {
+    if (examEmptyState) examEmptyState.style.display = "block";
+    return;
+  }
+  
+  if (examEmptyState) examEmptyState.style.display = "none";
+
+  // Render cards
+  exams.forEach(exam => {
+    const card = document.createElement("div");
+    card.className = "exam-card";
+    card.dataset.id = exam.id;
+    
+    // Format date string for display (e.g., Nov 24, 2026 - 10:00 AM)
+    const dateObj = new Date(exam.date);
+    const dateOptions = { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' };
+    const dateStr = dateObj.toLocaleDateString(undefined, dateOptions);
+
+    card.innerHTML = `
+      <div class="exam-header">
+        <div class="exam-info">
+          <h4>${escapeHtml(exam.title)}</h4>
+          <p><i class="ri-book-read-line"></i> ${escapeHtml(exam.subject)}</p>
+          <p style="margin-top: 2px;"><i class="ri-calendar-line"></i> ${dateStr}</p>
+        </div>
+        <button class="exam-delete-btn" aria-label="Delete Exam" onclick="deleteExam(${exam.id})">
+          <i class="ri-delete-bin-line"></i>
+        </button>
+      </div>
+
+      <div class="exam-countdown-display">
+        <div class="cd-box"><span class="cd-num cd-d">00</span><span class="cd-lbl">Days</span></div>
+        <div class="cd-box"><span class="cd-num cd-h">00</span><span class="cd-lbl">Hours</span></div>
+        <div class="cd-box"><span class="cd-num cd-m">00</span><span class="cd-lbl">Mins</span></div>
+        <div class="cd-box"><span class="cd-num cd-s">00</span><span class="cd-lbl">Secs</span></div>
+      </div>
+
+      <div class="exam-progress-wrap">
+        <div class="exam-progress-bar">
+          <div class="exam-progress-fill" style="width: 0%;"></div>
+        </div>
+      </div>
+      
+      ${exam.notes ? `<div class="exam-footer-notes"><i class="ri-information-line"></i> ${escapeHtml(exam.notes)}</div>` : ''}
+    `;
+    examsGrid.appendChild(card);
+  });
+
+}
+
+
+// Call renderExams once data is loaded (add to window.onload block)
+window.addEventListener('load', () => {
+  renderExams();
+  renderVault();
+  renderProjects();
+});
+
+// ==========================================================================
+// 10. MASTER PROJECTS & SUBTASKS FEATURE
+// ==========================================================================
+
+const addProjectBtn = document.getElementById("addProjectBtn");
+const projectFormBody = document.getElementById("projectFormBody");
+const cancelProjectBtn = document.getElementById("cancelProjectBtn");
+const saveProjectBtn = document.getElementById("saveProjectBtn");
+const newProjectTitleInput = document.getElementById("newProjectTitle");
+const projectsGrid = document.getElementById("projectsGrid");
+
+// Global dragging state
+let draggedSubtask = null;
+let draggedSubtaskParentId = null;
+
+if (addProjectBtn && projectFormBody) {
+  addProjectBtn.addEventListener("click", () => {
+    projectFormBody.style.display = "block";
+    newProjectTitleInput.focus();
+  });
+
+  cancelProjectBtn.addEventListener("click", () => {
+    projectFormBody.style.display = "none";
+    newProjectTitleInput.value = "";
+  });
+
+  saveProjectBtn.addEventListener("click", () => {
+    const title = newProjectTitleInput.value.trim();
+    if (!title) {
+      announce("Please enter a project name.");
+      return;
+    }
+
+    const newProject = {
+      id: Date.now(),
+      title: title,
+      subtasks: []
+    };
+
+    projects.push(newProject);
+    saveData();
+    renderProjects();
+    
+    projectFormBody.style.display = "none";
+    newProjectTitleInput.value = "";
+    announce(`Created project: ${title}`);
+  });
+}
+
+function calculateProjectProgress(subtasks) {
+  if (subtasks.length === 0) return 0;
+  const completed = subtasks.filter(st => st.completed).length;
+  return Math.round((completed / subtasks.length) * 100);
+}
+
+function toggleSubtask(projectId, subtaskId) {
+  const proj = projects.find(p => p.id === projectId);
+  if (!proj) return;
+  
+  const st = proj.subtasks.find(s => s.id === subtaskId);
+  if (!st) return;
+
+  st.completed = !st.completed;
+  saveData();
+  renderProjects();
+
+  if (st.completed) {
+    showTaskPopup("Subtask Completed! ✨");
+    announce("Subtask completed.");
+  } else {
+    announce("Subtask unchecked.");
+  }
+}
+
+function addSubtask(projectId) {
+  const inputEl = document.getElementById(`newSubtaskInput-${projectId}`);
+  if (!inputEl) return;
+  
+  const text = inputEl.value.trim();
+  if (!text) return;
+
+  const proj = projects.find(p => p.id === projectId);
+  if (!proj) return;
+
+  proj.subtasks.push({
+    id: Date.now() + Math.random().toString(36).substr(2, 5),
+    text: text,
+    completed: false
+  });
+
+  saveData();
+  renderProjects();
+}
+
+function deleteSubtask(projectId, subtaskId) {
+  const proj = projects.find(p => p.id === projectId);
+  if (!proj) return;
+
+  proj.subtasks = proj.subtasks.filter(s => s.id !== subtaskId);
+  saveData();
+  renderProjects();
+}
+
+function deleteProject(projectId) {
+  if (confirm("Are you sure you want to delete this master project?")) {
+    projects = projects.filter(p => p.id !== projectId);
+    saveData();
+    renderProjects();
+  }
+}
+
+// Drag & Drop specific to Subtasks
+function handleSubtaskDragStart(e, projectId, subtaskId) {
+  draggedSubtask = subtaskId;
+  draggedSubtaskParentId = projectId;
+  e.target.classList.add('dragging');
+  // Required for Firefox
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', subtaskId);
+}
+
+function handleSubtaskDragEnd(e) {
+  e.target.classList.remove('dragging');
+  draggedSubtask = null;
+  draggedSubtaskParentId = null;
+  
+  // Clean up any remaining drop indicators if necessary
+  const allContainers = document.querySelectorAll('.subtasks-list');
+  allContainers.forEach(c => c.style.border = "");
+}
+
+function handleSubtaskDragOver(e, projectId) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  
+  // Only allow reordering within the SAME project to prevent bugs
+  if (draggedSubtaskParentId !== projectId) return;
+
+  const container = document.getElementById(`subtaskList-${projectId}`);
+  const draggingItem = document.querySelector('.subtask-item.dragging');
+  if (!container || !draggingItem) return;
+
+  const afterElement = getDragAfterElement(container, e.clientY, '.subtask-item:not(.dragging)');
+  if (afterElement == null) {
+    container.appendChild(draggingItem);
+  } else {
+    container.insertBefore(draggingItem, afterElement);
+  }
+}
+
+function handleSubtaskDrop(e, projectId) {
+  e.preventDefault();
+  if (draggedSubtaskParentId !== projectId) return;
+
+  // Re-calculate the array order based on DOM
+  const container = document.getElementById(`subtaskList-${projectId}`);
+  if (!container) return;
+
+  const proj = projects.find(p => p.id === projectId);
+  if (!proj) return;
+
+  const newOrderIds = Array.from(container.querySelectorAll('.subtask-item')).map(item => item.dataset.subtaskId);
+  
+  // Rebuild the subtasks array based on the new order
+  const newSubtasksArray = [];
+  newOrderIds.forEach(id => {
+    const st = proj.subtasks.find(s => s.id === id);
+    if (st) newSubtasksArray.push(st);
+  });
+
+  proj.subtasks = newSubtasksArray;
+  saveData();
+  // No need to re-render immediately as the DOM is already visually updated, 
+  // but rendering ensures progress bars etc stay perfectly synced.
+  renderProjects();
+}
+
+function renderProjects() {
+  if (!projectsGrid) return;
+  projectsGrid.innerHTML = '';
+
+  if (projects.length === 0) {
+    projectsGrid.innerHTML = `
+      <div style="grid-column: 1/-1; text-align: center; color: var(--text-light); padding: 30px;">
+        <i class="ri-rocket-2-line" style="font-size: 3rem; opacity: 0.3;"></i>
+        <p style="margin-top: 10px;">No master projects yet. Break down a big goal today!</p>
+      </div>
+    `;
+    return;
+  }
+
+  projects.forEach(proj => {
+    const progress = calculateProjectProgress(proj.subtasks);
+    
+    const card = document.createElement("div");
+    card.className = "project-card";
+    
+    // Header & Progress
+    let html = `
+      <div class="project-header">
+        <h3>${escapeHtml(proj.title)}</h3>
+        <button class="subtask-delete-btn" style="opacity: 1;" onclick="deleteProject(${proj.id})" aria-label="Delete Project">
+          <i class="ri-delete-bin-line"></i>
+        </button>
+      </div>
+      <div class="project-progress-wrap">
+        <div class="project-progress-text">
+          <span>Progress</span>
+          <span style="font-weight: 600; color: ${progress === 100 ? '#10b981' : 'var(--text)'};">${progress}%</span>
+        </div>
+        <div class="project-progress-bar">
+          <div class="project-progress-fill" style="width: ${progress}%;"></div>
+        </div>
+      </div>
+      <div class="subtasks-list" id="subtaskList-${proj.id}">
+    `;
+
+    // Subtasks Array
+    proj.subtasks.forEach(st => {
+      html += `
+        <div class="subtask-item" data-subtask-id="${st.id}" draggable="true" 
+             ondragstart="handleSubtaskDragStart(event, ${proj.id}, '${st.id}')"
+             ondragend="handleSubtaskDragEnd(event)">
+          <i class="ri-draggable subtask-drag-handle"></i>
+          <input type="checkbox" class="subtask-checkbox" ${st.completed ? 'checked' : ''} onclick="toggleSubtask(${proj.id}, '${st.id}')">
+          <span class="subtask-text">${escapeHtml(st.text)}</span>
+          <button class="subtask-delete-btn" onclick="deleteSubtask(${proj.id}, '${st.id}')">
+            <i class="ri-close-line"></i>
+          </button>
+        </div>
+      `;
+    });
+
+    html += `
+      </div>
+      <div class="add-subtask-form">
+        <input type="text" class="add-subtask-input" id="newSubtaskInput-${proj.id}" placeholder="Add a subtask..." onkeypress="if(event.key === 'Enter') addSubtask(${proj.id})">
+        <button class="add-subtask-btn" onclick="addSubtask(${proj.id})"><i class="ri-add-line"></i></button>
+      </div>
+    `;
+
+    card.innerHTML = html;
+
+    // Attach dragover/drop to the subtask list container dynamically
+    const listContainer = card.querySelector(`#subtaskList-${proj.id}`);
+    if (listContainer) {
+      listContainer.addEventListener('dragover', (e) => handleSubtaskDragOver(e, proj.id));
+      listContainer.addEventListener('drop', (e) => handleSubtaskDrop(e, proj.id));
+    }
+
+    projectsGrid.appendChild(card);
+  });
+}
+
+// ==========================================================================
+// 9. FILES VAULT FEATURE (ATTACHMENTS & STORAGE)
+// ==========================================================================
+
+const vaultDropZone = document.getElementById("vaultDropZone");
+const vaultFileInput = document.getElementById("vaultFileInput");
+const vaultBrowseBtn = document.getElementById("vaultBrowseBtn");
+const vaultFilesGrid = document.getElementById("vaultFilesGrid");
+const vaultEmptyState = document.getElementById("vaultEmptyState");
+const vaultSearch = document.getElementById("vaultSearch");
+const storageFill = document.getElementById("storageFill");
+const storageText = document.getElementById("storageText");
+
+const MAX_FILE_SIZE = 500 * 1024; // 500 KB limit per file due to LocalStorage
+const MAX_STORAGE_QUOTA = 5 * 1024 * 1024; // 5 MB total quota estimate
+
+// Initialize search listener
+if (vaultSearch) {
+  vaultSearch.addEventListener("input", renderVault);
+}
+
+// Clear Vault button binding (added feature)
+const clearVaultBtn = document.getElementById("clearVaultBtn");
+if (clearVaultBtn) {
+  clearVaultBtn.addEventListener("click", clearVault);
+}
+
+// Drag & Drop Handlers
+if (vaultDropZone) {
+  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    vaultDropZone.addEventListener(eventName, preventDefaults, false);
+  });
+
+  function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  ['dragenter', 'dragover'].forEach(eventName => {
+    vaultDropZone.addEventListener(eventName, () => {
+      vaultDropZone.classList.add('drag-active');
+    }, false);
+  });
+
+  ['dragleave', 'drop'].forEach(eventName => {
+    vaultDropZone.addEventListener(eventName, () => {
+      vaultDropZone.classList.remove('drag-active');
+    }, false);
+  });
+
+  vaultDropZone.addEventListener('drop', (e) => {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    handleFiles(files);
+  }, false);
+
+  vaultBrowseBtn.addEventListener('click', () => {
+    vaultFileInput.click();
+  });
+
+  vaultFileInput.addEventListener('change', function() {
+    handleFiles(this.files);
+    // Reset input so same file can be selected again
+    this.value = '';
+  });
+}
+
+function getStorageUsed() {
+  let totalBytes = 0;
+  for (let key in localStorage) {
+    if (localStorage.hasOwnProperty(key)) {
+      totalBytes += ((localStorage[key].length + key.length) * 2); // rough estimate in bytes
+    }
+  }
+  return totalBytes;
+}
+
+function updateStorageUI() {
+  if (!storageFill || !storageText) return;
+  const usedBytes = getStorageUsed();
+  let percent = (usedBytes / MAX_STORAGE_QUOTA) * 100;
+  percent = Math.min(100, percent);
+  
+  storageFill.style.width = `${percent}%`;
+  
+  if (percent > 90) {
+    storageFill.style.background = "#ef4444"; // Red if almost full
+  } else if (percent > 75) {
+    storageFill.style.background = "#f59e0b"; // Orange
+  } else {
+    storageFill.style.background = "linear-gradient(90deg, var(--primary), var(--secondary))";
+  }
+
+  storageText.textContent = `${(usedBytes / 1024).toFixed(1)} KB / ${(MAX_STORAGE_QUOTA / 1024 / 1024).toFixed(1)} MB Used`;
+}
+
+function formatBytes(bytes, decimals = 2) {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ['Bytes', 'KB', 'MB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
+function handleFiles(files) {
+  const filesArray = Array.from(files);
+  let filesAdded = 0;
+
+  filesArray.forEach(file => {
+    if (file.size > MAX_FILE_SIZE) {
+      announce(`File "${file.name}" is too large! Max size is 500KB.`);
+      showTaskPopup(`"${file.name}" too large! 🚨`);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64Data = e.target.result;
+      
+      const newFileObj = {
+        id: Date.now() + Math.random().toString(36).substr(2, 5),
+        name: file.name,
+        type: file.type || 'application/octet-stream',
+        size: file.size,
+        data: base64Data,
+        addedAt: Date.now()
+      };
+
+      vaultFiles.push(newFileObj);
+      filesAdded++;
+
+      // Check if this is the last file to process
+      if (filesAdded === filesArray.length) {
+        saveData();
+        renderVault();
+        announce(`Uploaded ${filesAdded} file(s) to vault.`);
+        showTaskPopup("Files securely vaulted! 🛡️");
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function deleteVaultFile(id) {
+  vaultFiles = vaultFiles.filter(f => f.id !== id);
+  saveData();
+  renderVault();
+  announce("File deleted from vault.");
+}
+
+// New feature: Clear entire vault after confirmation
+function clearVault() {
+  const proceed = confirm("Are you sure you want to clear all files from the vault? This action cannot be undone.");
+  if (!proceed) return;
+  vaultFiles = [];
+  saveData();
+  renderVault();
+  announce("All files removed from vault.");
+  try { showTaskPopup("Vault cleared."); } catch (e) { /* ignore if popup not available */ }
+}
+
+function downloadVaultFile(id) {
+  const file = vaultFiles.find(f => f.id === id);
+  if (!file) return;
+
+  const a = document.createElement("a");
+  a.href = file.data;
+  a.download = file.name;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function renderVault() {
+  if (!vaultFilesGrid) return;
+  updateStorageUI();
+
+  // Clear existing cards
+  const existingCards = vaultFilesGrid.querySelectorAll(".vault-card");
+  existingCards.forEach(c => c.remove());
+
+  const searchTerm = vaultSearch ? vaultSearch.value.toLowerCase() : "";
+  const filteredFiles = vaultFiles.filter(f => f.name.toLowerCase().includes(searchTerm));
+
+  if (filteredFiles.length === 0) {
+    if (vaultEmptyState) vaultEmptyState.style.display = "block";
+    return;
+  }
+  
+  if (vaultEmptyState) vaultEmptyState.style.display = "none";
+
+  // Sort by newest first
+  filteredFiles.sort((a, b) => b.addedAt - a.addedAt);
+
+  filteredFiles.forEach(file => {
+    const card = document.createElement("div");
+    card.className = "vault-card";
+
+    let previewHtml = "";
+    if (file.type.startsWith("image/")) {
+      previewHtml = `<img src="${file.data}" alt="${file.name}" loading="lazy" />`;
+    } else if (file.type === "application/pdf") {
+      previewHtml = `<i class="ri-file-pdf-2-fill" style="color: #ef4444;"></i>`;
+    } else if (file.type.includes("text")) {
+      previewHtml = `<i class="ri-file-text-fill" style="color: var(--secondary);"></i>`;
+    } else {
+      previewHtml = `<i class="ri-file-fill" style="color: var(--text-light);"></i>`;
+    }
+
+    card.innerHTML = `
+      <div class="vault-card-preview">
+        ${previewHtml}
+      </div>
+      <div class="vault-card-info">
+        <div class="vault-card-name" title="${file.name}">${file.name}</div>
+        <div class="vault-card-size">${formatBytes(file.size)}</div>
+        <div class="vault-card-actions">
+          <button class="vault-action-btn" onclick="downloadVaultFile('${file.id}')" aria-label="Download ${file.name}">
+            <i class="ri-download-2-line"></i> Download
+          </button>
+          <button class="vault-action-btn delete" onclick="deleteVaultFile('${file.id}')" aria-label="Delete ${file.name}">
+            <i class="ri-delete-bin-line"></i>
+          </button>
+        </div>
+      </div>
+    `;
+
+    vaultFilesGrid.appendChild(card);
+  });
 }
