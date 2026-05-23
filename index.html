@@ -314,11 +314,29 @@
             <!-- TASKS -->
             <div class="task-list-wrapper">
               <div class="task-list" id="taskList">
-                <div class="empty-state">
-                  <i class="ri-ghost-2-line"></i>
-                  <h3>No Tasks Yet</h3>
-                  <p>Add tasks and start your productivity adventure.</p>
-                </div>
+                <div class="empty-state enhanced-empty" id="tasksEmpty">
+                    <!-- Simple SVG illustration -->
+                    <svg width="120" height="90" viewBox="0 0 120 90" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                      <defs>
+                        <linearGradient id="g1" x1="0" x2="1">
+                          <stop offset="0" stop-color="#8b5cf6" />
+                          <stop offset="1" stop-color="#06b6d4" />
+                        </linearGradient>
+                      </defs>
+                      <rect x="6" y="18" width="108" height="60" rx="8" fill="url(#g1)" opacity="0.12" />
+                      <rect x="14" y="26" width="92" height="14" rx="4" fill="#fff" opacity="0.06" />
+                      <rect x="14" y="46" width="64" height="10" rx="4" fill="#fff" opacity="0.06" />
+                      <rect x="14" y="60" width="44" height="8" rx="4" fill="#fff" opacity="0.06" />
+                      <circle cx="96" cy="50" r="12" fill="url(#g1)" />
+                      <path d="M90 46 L102 54" stroke="#fff" stroke-width="2" stroke-linecap="round" />
+                    </svg>
+                    <h3>No Tasks Yet</h3>
+                    <p class="muted">Your quest list is empty — time to create your first task and get rewarded!</p>
+                    <div class="empty-cta-row">
+                      <button class="view-btn primary" id="ctaCreateTask">Create Your First Task</button>
+                      <button class="view-btn" id="ctaBrowseTemplates">Use Template</button>
+                    </div>
+                  </div>
               </div>
 
               <div class="board-columns" id="boardColumns" style="display: none;">
@@ -793,9 +811,25 @@
         <!-- Files Grid -->
         <div class="vault-files-grid" id="vaultFilesGrid">
           <!-- Dynamically populated -->
-          <div class="vault-empty-state" id="vaultEmptyState">
-            <i class="ri-file-damage-line"></i>
-            <p>Your vault is empty. Upload some study materials!</p>
+          <div class="vault-empty-state enhanced-empty" id="vaultEmptyState">
+            <svg width="120" height="90" viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <defs>
+                <linearGradient id="g2" x1="0" x2="1">
+                  <stop offset="0" stop-color="#10b981" />
+                  <stop offset="1" stop-color="#06b6d4" />
+                </linearGradient>
+              </defs>
+              <rect x="10" y="18" width="100" height="54" rx="8" fill="url(#g2)" opacity="0.12" />
+              <path d="M30 36h60v4H30z" fill="#fff" opacity="0.06" />
+              <path d="M30 50h40v6H30z" fill="#fff" opacity="0.06" />
+              <circle cx="92" cy="60" r="10" fill="url(#g2)" />
+            </svg>
+            <h3>Your Vault is Empty</h3>
+            <p class="muted">Store important PDFs, notes, and images here for quick access.</p>
+            <div class="empty-cta-row">
+              <button class="view-btn primary" id="ctaUploadFiles">Upload Files</button>
+              <button class="view-btn" id="vaultBrowseBtnSmall">Browse Device</button>
+            </div>
           </div>
         </div>
 

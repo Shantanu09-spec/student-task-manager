@@ -961,6 +961,14 @@ body.light .topbar-left h2 {
   margin-bottom: 10px;
 }
 
+.enhanced-empty { display:flex; flex-direction:column; align-items:center; gap:12px; padding:28px; }
+.enhanced-empty svg { max-width:160px; height:auto; transform-origin:center; transition: transform 220ms ease; }
+.enhanced-empty:hover svg { transform: translateY(-6px) rotate(-1deg); }
+.muted { color: var(--text-light); }
+.empty-cta-row { display:flex; gap:8px; margin-top:10px; }
+.view-btn.primary { background: linear-gradient(90deg, #8b5cf6, #06b6d4); color: white; }
+.view-btn.primary:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(99,102,241,0.15); }
+
 .task-box input,
 .task-box select {
   background: rgba(255, 255, 255, 0.08);

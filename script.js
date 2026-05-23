@@ -1382,10 +1382,23 @@ function renderPerformance() {
 
   if (performanceData.length === 0) {
     container.innerHTML = `
-      <div class="empty-state">
-        <i class="ri-medal-line"></i>
-        <h3>No Records Found</h3>
-        <p>Add your subjects and marks to visualize your academic progress.</p>
+      <div class="empty-state enhanced-empty" id="performanceEmpty">
+        <svg width="140" height="90" viewBox="0 0 140 90" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="g4" x1="0" x2="1">
+              <stop offset="0" stop-color="#6366f1" />
+              <stop offset="1" stop-color="#06b6d4" />
+            </linearGradient>
+          </defs>
+          <rect x="10" y="18" width="120" height="54" rx="8" fill="url(#g4)" opacity="0.12" />
+          <path d="M26 34h88v6H26z" fill="#fff" opacity="0.06" />
+          <circle cx="110" cy="56" r="10" fill="url(#g4)" />
+        </svg>
+        <h3>No Academic Records</h3>
+        <p class="muted">Add subjects and their scores to visualize your academic performance.</p>
+        <div class="empty-cta-row">
+          <button class="view-btn primary" id="ctaAddSubject">Add Subject</button>
+        </div>
       </div>
     `;
     if (statsContainer) statsContainer.innerHTML = "";
@@ -2419,7 +2432,34 @@ function renderFocusHistory() {
 
   const history = analyticsData.focusHistory || [];
   if (history.length === 0) {
-    container.innerHTML = `<div class="empty-history" style="text-align: center; color: var(--textLight); padding: 20px;">No sessions logged yet.</div>`;
+    container.innerHTML = `
+      <div class="empty-state enhanced-empty" id="focusEmpty">
+        <svg width="140" height="90" viewBox="0 0 140 90" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="g3" x1="0" x2="1">
+              <stop offset="0" stop-color="#f59e0b" />
+              <stop offset="1" stop-color="#f43f5e" />
+            </linearGradient>
+          </defs>
+          <rect x="8" y="18" width="124" height="54" rx="8" fill="url(#g3)" opacity="0.12" />
+          <path d="M28 40h84v6H28z" fill="#fff" opacity="0.06" />
+          <circle cx="110" cy="56" r="10" fill="url(#g3)" />
+        </svg>
+        <h3>No Focus Sessions Yet</h3>
+        <p class="muted">Track study sessions with the Pomodoro timer to build momentum.</p>
+        <div class="empty-cta-row">
+          <button class="view-btn primary" id="ctaStartSession">Start Focus Session</button>
+          <button class="view-btn" id="ctaCreateTaskFromHistory">Create Task</button>
+        </div>
+      </div>
+    `;
+    // Attach CTA handlers after inserting
+    setTimeout(() => {
+      const startBtn = document.getElementById('ctaStartSession');
+      const createBtn = document.getElementById('ctaCreateTaskFromHistory');
+      if (startBtn) startBtn.addEventListener('click', () => { startTimer(); });
+      if (createBtn) createBtn.addEventListener('click', () => { document.getElementById('taskInput').focus(); });
+    }, 0);
     return;
   }
 
@@ -2993,6 +3033,7 @@ document.addEventListener("DOMContentLoaded", () => {
   renderWeeklyStreak();
   updateDisplay();
   renderPerformance();
+  renderFocusHistory();
   renderTimetable();
   renderCalendar();
   renderProfile();
@@ -3027,6 +3068,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (markAllBtn) markAllBtn.addEventListener('click', () => markAllRead());
   if (clearAllBtn) clearAllBtn.addEventListener('click', () => clearAllNotifications());
+
+  // CTA wiring for empty states
+  const ctaCreateTask = document.getElementById('ctaCreateTask');
+  if (ctaCreateTask) ctaCreateTask.addEventListener('click', () => { document.getElementById('taskInput').focus(); });
+
+  const ctaBrowseTemplates = document.getElementById('ctaBrowseTemplates');
+  if (ctaBrowseTemplates) ctaBrowseTemplates.addEventListener('click', () => { document.getElementById('taskTemplate').focus(); });
+
+  const ctaUploadFiles = document.getElementById('ctaUploadFiles');
+  if (ctaUploadFiles) ctaUploadFiles.addEventListener('click', () => { document.getElementById('vaultFileInput').click(); });
+
+  const vaultBrowseBtnSmall = document.getElementById('vaultBrowseBtnSmall');
+  if (vaultBrowseBtnSmall) vaultBrowseBtnSmall.addEventListener('click', () => { document.getElementById('vaultFileInput').click(); });
+
+  const ctaAddSubject = document.getElementById('ctaAddSubject');
+  if (ctaAddSubject) ctaAddSubject.addEventListener('click', () => { const s = document.getElementById('subjectInputForm'); if (s) { s.style.display='grid'; s.querySelector('input')?.focus(); } });
 
   // Footer: set dynamic year and small accessibility tweaks
   const footerCopyright = document.getElementById('footerCopyright');
