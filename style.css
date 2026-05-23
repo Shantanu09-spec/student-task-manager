@@ -458,6 +458,28 @@ body {
 .drag-handle:active { cursor: grabbing; }
 
 .touch-dragging-active { position: relative; z-index: 9999; }
+
+/* Notifications */
+.notification-wrap { position: relative; display:inline-block; margin-left:12px; }
+.notification-bell { position: relative; width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; }
+.notif-badge { position:absolute; top:6px; right:6px; background:#ef4444; color:white; font-size:11px; padding:2px 6px; border-radius:999px; line-height:1; }
+.notification-panel { position: absolute; right: 0; top: 52px; width: 320px; max-height: 420px; background: var(--card); border:1px solid var(--border); box-shadow: 0 14px 40px rgba(2,6,23,0.6); border-radius:12px; overflow: hidden; display:none; z-index:9999; }
+.notification-panel-header { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid rgba(255,255,255,0.03); }
+.notifications-list { max-height: 320px; overflow:auto; padding:8px; display:flex; flex-direction:column; gap:8px; }
+.notif-item { display:flex; gap:10px; padding:10px; border-radius:8px; align-items:flex-start; background: transparent; transition: background 180ms ease; }
+.notif-item.unread { background: rgba(139,92,246,0.06); }
+.notif-item:hover { background: rgba(255,255,255,0.02); }
+.notif-icon { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; background: rgba(255,255,255,0.04); font-size:16px; }
+.notif-body { flex:1; }
+.notif-time { font-size:11px; color:var(--text-light); margin-top:6px; }
+.notif-actions { display:flex; gap:8px; align-items:center; }
+.notif-empty { padding:14px; text-align:center; color:var(--text-light); display:none; }
+.view-btn.small { font-size:12px; padding:6px 8px; margin-left:8px; }
+.view-btn.small.danger { background:#ef4444; color:white; }
+
+@media (max-width: 800px) {
+  .notification-panel { right: 8px; left: 8px; top: 56px; width: auto; }
+}
   margin-bottom: 28px;
   background: linear-gradient(135deg, var(--primary), var(--secondary));
   -webkit-background-clip: text;

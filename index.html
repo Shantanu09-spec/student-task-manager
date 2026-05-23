@@ -160,6 +160,26 @@
             <button class="theme-dot" data-theme="cyberpunk" aria-label="Cyberpunk Theme" style="background: linear-gradient(135deg, #ec4899, #3b82f6);"></button>
             <button class="theme-dot" data-theme="sunset" aria-label="Sunset Theme" style="background: linear-gradient(135deg, #f59e0b, #f43f5e);"></button>
           </div>
+          <!-- Notification Bell -->
+          <div class="notification-wrap">
+            <button id="notificationBell" class="icon-btn notification-bell" aria-label="Notifications" title="Notifications" aria-expanded="false">
+              <i class="ri-notification-3-line"></i>
+              <span id="notificationBadge" class="notif-badge" aria-hidden="true" style="display:none">0</span>
+            </button>
+            <div id="notificationPanel" class="notification-panel" aria-hidden="true">
+              <div class="notification-panel-header">
+                <strong>Notifications</strong>
+                <div>
+                  <button id="markAllReadBtn" class="view-btn small">Mark all read</button>
+                  <button id="clearAllNotifBtn" class="view-btn small danger">Clear all</button>
+                </div>
+              </div>
+              <div id="notificationsList" class="notifications-list">
+                <!-- notifications populated here -->
+              </div>
+              <div id="noNotifications" class="notif-empty">You're all caught up 🎉</div>
+            </div>
+          </div>
         </div>
       </div>
 

@@ -329,6 +329,147 @@ function saveData() {
 }
 
 // ==========================
+// Notifications Center
+// ==========================
+let notifications = [];
+
+function loadNotifications() {
+  try {
+    const raw = localStorage.getItem('quests_notifications');
+    notifications = raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    notifications = [];
+  }
+}
+
+function saveNotifications() {
+  try {
+    localStorage.setItem('quests_notifications', JSON.stringify(notifications));
+  } catch (e) {
+    console.error('Failed saving notifications', e);
+  }
+}
+
+function addNotification({ id, type = 'info', title, body, time = Date.now(), ref } = {}) {
+  if (!id) id = `${type}-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+  // avoid duplicate for same ref/type
+  if (ref) {
+    const exists = notifications.find(n => n.ref === ref && n.type === type);
+    if (exists) return exists;
+  }
+
+  const n = { id, type, title, body, time, read: false, ref };
+  notifications.unshift(n);
+  saveNotifications();
+  renderNotificationPanel();
+  updateNotificationBadge();
+  return n;
+}
+
+function markAsRead(id) {
+  const n = notifications.find(x => x.id === id);
+  if (n && !n.read) {
+    n.read = true;
+    saveNotifications();
+    renderNotificationPanel();
+    updateNotificationBadge();
+  }
+}
+
+function markAllRead() {
+  notifications.forEach(n => n.read = true);
+  saveNotifications();
+  renderNotificationPanel();
+  updateNotificationBadge();
+}
+
+function clearAllNotifications() {
+  notifications = [];
+  saveNotifications();
+  renderNotificationPanel();
+  updateNotificationBadge();
+}
+
+function updateNotificationBadge() {
+  const badge = document.getElementById('notificationBadge');
+  const unread = notifications.filter(n => !n.read).length;
+  if (badge) {
+    if (unread > 0) { badge.style.display = 'inline-block'; badge.textContent = unread; }
+    else { badge.style.display = 'none'; }
+  }
+}
+
+function renderNotificationPanel() {
+  const list = document.getElementById('notificationsList');
+  const empty = document.getElementById('noNotifications');
+  if (!list || !empty) return;
+  list.innerHTML = '';
+  if (!notifications || notifications.length === 0) {
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  notifications.slice(0, 100).forEach(n => {
+    const item = document.createElement('div');
+    item.className = `notif-item ${n.read ? '' : 'unread'}`;
+    item.setAttribute('data-id', n.id);
+
+    const icon = document.createElement('div');
+    icon.className = 'notif-icon';
+    icon.textContent = n.type === 'exam' ? '📚' : (n.type === 'deadline' ? '⏰' : (n.type === 'achievement' ? '🏆' : '🔔'));
+
+    const body = document.createElement('div');
+    body.className = 'notif-body';
+    const h = document.createElement('div');
+    h.innerHTML = `<strong>${escapeHtml(n.title)}</strong>`;
+    const p = document.createElement('div');
+    p.textContent = n.body;
+    p.className = 'notif-time';
+    const time = document.createElement('div');
+    time.className = 'notif-time';
+    time.textContent = new Date(n.time).toLocaleString();
+
+    body.appendChild(h);
+    body.appendChild(p);
+    body.appendChild(time);
+
+    const actions = document.createElement('div');
+    actions.className = 'notif-actions';
+    const btn = document.createElement('button');
+    btn.className = 'view-btn small';
+    btn.textContent = n.read ? 'Read' : 'Mark read';
+    btn.addEventListener('click', () => {
+      markAsRead(n.id);
+    });
+
+    actions.appendChild(btn);
+
+    item.appendChild(icon);
+    item.appendChild(body);
+    item.appendChild(actions);
+
+    list.appendChild(item);
+  });
+}
+
+// Toggle panel visibility
+function toggleNotificationPanel(show) {
+  const panel = document.getElementById('notificationPanel');
+  const bell = document.getElementById('notificationBell');
+  if (!panel || !bell) return;
+  const isOpen = panel.style.display === 'block';
+  if (typeof show === 'boolean') {
+    panel.style.display = show ? 'block' : 'none';
+    bell.setAttribute('aria-expanded', show ? 'true' : 'false');
+  } else {
+    panel.style.display = isOpen ? 'none' : 'block';
+    bell.setAttribute('aria-expanded', !isOpen ? 'true' : 'false');
+  }
+}
+
+
+// ==========================
 // Drag & Drop: Persist order
 // ==========================
 function enableDragAndDrop() {
@@ -616,6 +757,8 @@ function checkAchievements() {
       if (ach.check()) {
         analyticsData.unlockedAchievements.push(ach.id);
         triggerAchievementToast(ach.title);
+        // Add notification for achievement
+        addNotification({ type: 'achievement', title: `Achievement unlocked: ${ach.title}`, body: ach.desc, ref: `ach-${ach.id}` });
         newlyUnlocked = true;
       }
     }
@@ -1611,6 +1754,7 @@ function startTimer() {
 
       if (isStudy) {
         sendNotification("Session Complete!", "Study session complete! Take a well-deserved break ☕");
+        addNotification({ type: 'break', title: 'Study session complete', body: 'Time for a break ☕' });
         alert("Study session complete! Take a break.");
 
         // Log session in focus history
@@ -1644,6 +1788,7 @@ function startTimer() {
         checkAchievements();
       } else {
         sendNotification("Break Over!", "Break over! Time to focus back on your tasks ⚔️");
+        addNotification({ type: 'break', title: 'Break over', body: 'Break finished — back to study!' });
         alert("Break over! Back to study.");
 
         isStudy = true;
@@ -2510,6 +2655,7 @@ function updateDeadlineAlerts() {
     // Send browser notification for tasks reaching critical urgency
     if (urgencyData.urgency === "critical") {
       sendNotification("Urgent Deadline!", `COMPLETE ${task.text} TASK ASAP`);
+      addNotification({ type: 'deadline', title: `Deadline: ${task.text}`, body: `${urgencyData.formatted} left`, ref: `task-deadline-${task.id}` });
     }
 
 
@@ -2851,6 +2997,36 @@ document.addEventListener("DOMContentLoaded", () => {
   renderCalendar();
   renderProfile();
   renderSubjectTracker();
+
+  // Notifications init
+  loadNotifications();
+  renderNotificationPanel();
+  updateNotificationBadge();
+
+  const bell = document.getElementById('notificationBell');
+  const panel = document.getElementById('notificationPanel');
+  const markAllBtn = document.getElementById('markAllReadBtn');
+  const clearAllBtn = document.getElementById('clearAllNotifBtn');
+
+  if (bell) {
+    bell.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleNotificationPanel();
+    });
+  }
+
+  // Close panel if clicking outside
+  document.addEventListener('click', (e) => {
+    if (!panel) return;
+    const target = e.target;
+    if (!panel.contains(target) && !bell.contains(target)) {
+      panel.style.display = 'none';
+      if (bell) bell.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  if (markAllBtn) markAllBtn.addEventListener('click', () => markAllRead());
+  if (clearAllBtn) clearAllBtn.addEventListener('click', () => clearAllNotifications());
 
   // Footer: set dynamic year and small accessibility tweaks
   const footerCopyright = document.getElementById('footerCopyright');
@@ -3301,6 +3477,9 @@ if (addExamBtn) {
     renderExams();
     announce(`Added exam: ${title}`);
 
+    // Add notification for new exam tracked
+    addNotification({ type: 'exam', title: `Exam tracked: ${title}`, body: `${subject} — ${new Date(exam.date).toLocaleString()}`, ref: `exam-${exam.id}` });
+
     // Clear form
     document.getElementById("examTitle").value = "";
     document.getElementById("examSubject").value = "";
@@ -3369,6 +3548,7 @@ function updateExamsCountdown() {
       // Trigger notification once if < 24h
       if (!notifiedExams.has(exam.id)) {
         sendNotification("Urgent Exam!", `${exam.title} is in less than 24 hours!`);
+        addNotification({ type: 'exam', title: `Exam soon: ${exam.title}`, body: `${exam.subject} in <24 hours`, ref: `exam-urgent-${exam.id}` });
         notifiedExams.add(exam.id);
       }
     } else if (timeDiff < 3 * 24 * 60 * 60 * 1000) {
