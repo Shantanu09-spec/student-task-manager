@@ -1285,15 +1285,27 @@
 
         <div class="calendar-container glass">
           <div class="calendar-header">
-            <button class="icon-btn" id="prevMonth" aria-label="Previous Month"><i class="ri-arrow-left-s-line"></i></button>
-            <h3 id="currentMonthYear">Month Year</h3>
-            <button class="icon-btn" id="nextMonth" aria-label="Next Month"><i class="ri-arrow-right-s-line"></i></button>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <button class="icon-btn" id="prevMonth" aria-label="Previous"><i class="ri-arrow-left-s-line"></i></button>
+              <h3 id="currentMonthYear">Month Year</h3>
+              <button class="icon-btn" id="nextMonth" aria-label="Next"><i class="ri-arrow-right-s-line"></i></button>
+            </div>
+            <div style="margin-left:auto;display:flex;gap:6px;">
+              <button class="view-btn small active" id="calViewMonth">Monthly</button>
+              <button class="view-btn small" id="calViewWeek">Weekly</button>
+            </div>
           </div>
           <div class="calendar-weekdays">
             <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
           </div>
           <div class="calendar-grid" id="calendarGrid">
             <!-- Days populated by JS -->
+          </div>
+          <div class="calendar-legend" style="padding-top:10px;">
+            <div class="legend-item"><span class="legend-dot task"></span> Tasks</div>
+            <div class="legend-item"><span class="legend-dot exam"></span> Exams</div>
+            <div class="legend-item"><span class="legend-dot focus"></span> Focus Sessions</div>
+            <div class="legend-item"><span class="legend-dot daily"></span> Daily Goals</div>
           </div>
         </div>
 

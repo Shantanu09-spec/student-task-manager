@@ -6805,6 +6805,27 @@ body.light .drag-handle:hover {
   margin-bottom: 25px;
 }
 
+.event-task { background: linear-gradient(90deg,#06b6d4,#8b5cf6); color:#fff; }
+.event-exam { background: linear-gradient(90deg,#f97316,#f43f5e); color:#fff; }
+.event-focus { background: linear-gradient(90deg,#10b981,#06b6d4); color:#fff; }
+.event-daily { background: linear-gradient(90deg,#f59e0b,#f97316); color:#fff; }
+.event-custom { background: linear-gradient(90deg,#7c3aed,#06b6d4); color:#fff; }
+
+.calendar-legend { display:flex; gap:8px; margin-top:10px; align-items:center; }
+.legend-item { display:flex; gap:6px; align-items:center; font-size:13px; }
+.legend-dot { width:12px; height:12px; border-radius:50%; }
+.legend-dot.task { background: linear-gradient(90deg,#06b6d4,#8b5cf6); }
+.legend-dot.exam { background: linear-gradient(90deg,#f97316,#f43f5e); }
+.legend-dot.focus { background: linear-gradient(90deg,#10b981,#06b6d4); }
+.legend-dot.daily { background: linear-gradient(90deg,#f59e0b,#f97316); }
+
+.calendar-day.upcoming { border-color: rgba(249,115,22,0.35); }
+
+@media (max-width: 720px) {
+  .calendar-grid { grid-template-columns: repeat(7, 1fr); }
+  .calendar-day { min-height:72px; padding:8px; }
+}
+
 .calendar-header h3 {
   font-size: 22px;
   font-weight: 800;

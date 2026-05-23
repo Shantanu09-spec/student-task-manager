@@ -57,6 +57,7 @@ let coins = 0;
 let streak = 0;
 let xp = 120;
 let currentStudyView = "weekly";
+let currentCalendarView = 'month';
 let profile = { name: "Student Hero", gender: "Male", class: "Class 10", title: "Focus Warrior ⚔️", photo: null };
 
 // Chart.js instances
@@ -308,6 +309,16 @@ function loadData() {
       subjects = JSON.parse(savedSubjects);
     } catch (e) {
       subjects = [];
+    }
+  }
+
+  // Load Calendar Events
+  const savedCalendar = localStorage.getItem('quests_calendar');
+  if (savedCalendar) {
+    try {
+      calendarEvents = JSON.parse(savedCalendar);
+    } catch (e) {
+      calendarEvents = [];
     }
   }
 }
@@ -930,6 +941,9 @@ function addTask() {
 
   saveData();
   renderTasks();
+
+  // Refresh calendar to reflect any deadlines
+  renderCalendar();
 
   updateDeadlineAlerts();
 
@@ -1597,6 +1611,11 @@ function renderCalendar() {
   if (!grid) return;
 
   grid.innerHTML = "";
+  // if week view active, render week
+  if (currentCalendarView === 'week') {
+    renderCalendarWeek(grid, currentCalendarDate);
+    return;
+  }
   const year = currentCalendarDate.getFullYear();
   const month = currentCalendarDate.getMonth();
   
@@ -1624,15 +1643,53 @@ function renderCalendar() {
     }
 
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    const dayEvents = calendarEvents.filter(e => e.date === dateStr);
+    const dayEvents = [];
+    // calendar custom events
+    calendarEvents.filter(e => e.date === dateStr).forEach(e => dayEvents.push(Object.assign({}, e, { type: 'custom' })));
+    // tasks with deadline on this date
+    tasks.filter(t => t.deadline).forEach(t => {
+      const dt = getDatePart(t.deadline);
+      if (dt === dateStr) dayEvents.push({ id: t.id, title: t.text, type: 'task', deadline: t.deadline, category: t.category });
+    });
+    // exams
+    exams.forEach(ex => {
+      const exDate = new Date(ex.date);
+      const exDateStr = `${exDate.getFullYear()}-${String(exDate.getMonth()+1).padStart(2,'0')}-${String(exDate.getDate()).padStart(2,'0')}`;
+      if (exDateStr === dateStr) dayEvents.push({ id: ex.id, title: ex.title, type: 'exam', subject: ex.subject });
+    });
+    // focus sessions
+    (analyticsData.focusHistory || []).forEach(f => {
+      const fDate = new Date(f.timestamp);
+      const fDateStr = `${fDate.getFullYear()}-${String(fDate.getMonth()+1).padStart(2,'0')}-${String(fDate.getDate()).padStart(2,'0')}`;
+      if (fDateStr === dateStr) dayEvents.push({ id: f.timestamp, title: `Focus ${f.duration || f.minutes || ''}m`, type: 'focus' });
+    });
+    // daily goals (show on today only)
+    try {
+      const dg = JSON.parse(localStorage.getItem('daily_goals') || '[]');
+      if (dg && dg.length > 0) {
+        const todayStr = getFormattedDate(new Date());
+        if (todayStr === dateStr) dg.forEach(g => dayEvents.push({ id: g.id || g.text, title: g.text || 'Daily Goal', type: 'daily' }));
+      }
+    } catch(e) {}
 
     dayDiv.innerHTML = `<span class="day-number">${d}</span>`;
-    dayEvents.forEach(e => {
+    dayEvents.slice(0,3).forEach(e => {
       const eDiv = document.createElement("div");
-      eDiv.className = "event-pill-mini";
+      eDiv.className = `event-pill-mini ${e.type === 'task' ? 'event-task' : e.type === 'exam' ? 'event-exam' : e.type === 'focus' ? 'event-focus' : e.type === 'daily' ? 'event-daily' : 'event-custom'}`;
       eDiv.textContent = e.title;
+      eDiv.title = e.title;
       dayDiv.appendChild(eDiv);
     });
+
+    // highlight upcoming deadlines (within 48 hours)
+    const twoDaysAhead = new Date(); twoDaysAhead.setDate(twoDaysAhead.getDate()+2);
+    const todayISO = getFormattedDate(new Date());
+    const checkUpcoming = tasks.some(t => {
+      if (!t.deadline) return false;
+      const dpart = getDatePart(t.deadline);
+      return dpart === dateStr && new Date(t.deadline) <= twoDaysAhead && new Date(t.deadline) >= new Date();
+    });
+    if (checkUpcoming) dayDiv.classList.add('upcoming');
 
     dayDiv.onclick = () => {
       document.getElementById("eventDateInput").value = dateStr;
@@ -1676,6 +1733,53 @@ function initCalendarNotifier() {
       renderCalendar();
     }
   }, 30000);
+}
+
+function getDatePart(val) {
+  if (!val) return null;
+  // handle datetime-local value like 2026-05-23T14:00
+  if (typeof val === 'string' && val.indexOf('T') !== -1) return val.split('T')[0];
+  try {
+    const d = new Date(val);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  } catch (e) { return null; }
+}
+
+function renderCalendarWeek(grid, dateRef) {
+  grid.innerHTML = '';
+  const start = new Date(dateRef);
+  // set to start of week (Sunday)
+  start.setDate(start.getDate() - start.getDay());
+
+  for (let i = 0; i < 7; i++) {
+    const day = new Date(start);
+    day.setDate(start.getDate() + i);
+    const dateStr = `${day.getFullYear()}-${String(day.getMonth()+1).padStart(2,'0')}-${String(day.getDate()).padStart(2,'0')}`;
+
+    const col = document.createElement('div');
+    col.className = 'calendar-day';
+    col.innerHTML = `<span class="day-number">${day.getDate()}</span><div style="margin-top:22px; font-weight:600;">${day.toLocaleDateString(undefined,{weekday:'long'})}</div>`;
+
+    const dayEvents = [];
+    calendarEvents.filter(e => e.date === dateStr).forEach(e => dayEvents.push(Object.assign({}, e, { type: 'custom' })));
+    tasks.filter(t => t.deadline && getDatePart(t.deadline) === dateStr).forEach(t => dayEvents.push({ id: t.id, title: t.text, type: 'task', deadline: t.deadline, category: t.category }));
+    exams.forEach(ex => { const exDate = new Date(ex.date); const exDateStr = `${exDate.getFullYear()}-${String(exDate.getMonth()+1).padStart(2,'0')}-${String(exDate.getDate()).padStart(2,'0')}`; if (exDateStr === dateStr) dayEvents.push({ id: ex.id, title: ex.title, type: 'exam' }); });
+    (analyticsData.focusHistory || []).forEach(f => { const fDate = new Date(f.timestamp); const fDateStr = `${fDate.getFullYear()}-${String(fDate.getMonth()+1).padStart(2,'0')}-${String(fDate.getDate()).padStart(2,'0')}`; if (fDateStr === dateStr) dayEvents.push({ id: f.timestamp, title: `Focus ${f.duration || f.minutes || ''}m`, type: 'focus' }); });
+
+    dayEvents.forEach(e => {
+      const eDiv = document.createElement('div');
+      eDiv.className = `event-pill-mini ${e.type === 'task' ? 'event-task' : e.type === 'exam' ? 'event-exam' : e.type === 'focus' ? 'event-focus' : e.type === 'daily' ? 'event-daily' : 'event-custom'}`;
+      eDiv.textContent = e.title;
+      col.appendChild(eDiv);
+    });
+
+    col.onclick = () => {
+      document.getElementById('eventDateInput').value = dateStr;
+      document.getElementById('eventTitleInput').focus();
+    };
+
+    grid.appendChild(col);
+  }
 }
 
 function updateAnalyticsStreak(todayStr) {
@@ -1781,6 +1885,9 @@ function startTimer() {
         if (analyticsData.focusHistory.length > 10) {
           analyticsData.focusHistory.shift();
         }
+
+        saveData();
+        renderCalendar();
 
         isStudy = false;
         currentTime = breakTime;
@@ -3361,6 +3468,9 @@ document.addEventListener("DOMContentLoaded", () => {
     renderCalendar();
   });
 
+  document.getElementById('calViewMonth')?.addEventListener('click', (e) => { currentCalendarView = 'month'; document.getElementById('calViewMonth')?.classList.add('active'); document.getElementById('calViewWeek')?.classList.remove('active'); renderCalendar(); });
+  document.getElementById('calViewWeek')?.addEventListener('click', (e) => { currentCalendarView = 'week'; document.getElementById('calViewWeek')?.classList.add('active'); document.getElementById('calViewMonth')?.classList.remove('active'); renderCalendar(); });
+
   document.getElementById("addEventBtn")?.addEventListener("click", () => {
     const title = document.getElementById("eventTitleInput").value.trim();
     const date = document.getElementById("eventDateInput").value;
@@ -3671,6 +3781,7 @@ if (addExamBtn) {
 
     saveData();
     renderExams();
+    renderCalendar();
     announce(`Added exam: ${title}`);
 
     // Add notification for new exam tracked
