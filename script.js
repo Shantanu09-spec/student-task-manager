@@ -5021,5 +5021,5 @@ function renderVault() {
 
 
 
-/* Keyboard Shortcuts */
-document.addEventListener('keydown', (e) => { if (e.altKey && e.key === 'n') { e.preventDefault(); document.getElementById('taskInput')?.focus(); } if (e.altKey && e.key === 'p') { e.preventDefault(); const timerBtn = document.querySelector('.pomodoro-card .timer-buttons button i.ri-play-fill'); if (timerBtn) { timerBtn.parentElement.click(); } else { const pauseBtn = document.querySelector('.pomodoro-card .timer-buttons button i.ri-pause-fill'); if (pauseBtn) pauseBtn.parentElement.click(); } } });
+/* Export JSON Logic */
+document.getElementById('exportJsonBtn')?.addEventListener('click', () => { const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(tasks, null, 2)); const dlAnchorElem = document.createElement('a'); dlAnchorElem.setAttribute('href', dataStr); dlAnchorElem.setAttribute('download', 'taskquest_backup.json'); dlAnchorElem.click(); });
