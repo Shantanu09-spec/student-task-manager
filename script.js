@@ -5020,3 +5020,6 @@ function renderVault() {
 }
 
 
+
+/* Keyboard Shortcuts */
+document.addEventListener('keydown', (e) => { if (e.altKey && e.key === 'n') { e.preventDefault(); document.getElementById('taskInput')?.focus(); } if (e.altKey && e.key === 'p') { e.preventDefault(); const timerBtn = document.querySelector('.pomodoro-card .timer-buttons button i.ri-play-fill'); if (timerBtn) { timerBtn.parentElement.click(); } else { const pauseBtn = document.querySelector('.pomodoro-card .timer-buttons button i.ri-pause-fill'); if (pauseBtn) pauseBtn.parentElement.click(); } } });
