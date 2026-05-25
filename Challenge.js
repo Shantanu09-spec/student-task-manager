@@ -1,3 +1,4 @@
+"use strict";
 const CHALLENGES = [
   { text: "Your first task is to read one book of your choice this week. Pick any genre — fiction, self-help, or a classic. Crack it open and dive in!", tag: "📚 Reading", pts: 10 },
   { text: "Complete one full study session of at least 45 minutes today with zero distractions. No phone, no social media — pure focus mode.", tag: "📖 Study", pts: 15 },
