@@ -3769,6 +3769,7 @@ const celebration = document.getElementById("celebration");
 const themeSwitcher = document.getElementById("themeSwitcher");
 
 // --- Initialization ---
+"use strict";
 document.addEventListener("DOMContentLoaded", () => {
   renderTasks();
   initTheme();
