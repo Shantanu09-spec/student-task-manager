@@ -369,6 +369,7 @@ let currentFilter = "All";
 let currentSort = "default";
 let searchQuery = "";
 let currentView = "list";
+let smartSortEnabled = false; 
 let performanceData = [];
 let timetable = [];
 let calendarEvents = [];
@@ -1456,6 +1457,8 @@ function createTaskEl(task) {
   }
 
   const pri = task.priority || "Medium";
+  const urgencyInfo = window.Prioritization ? window.Prioritization.getUrgencyInfo(task) : null;
+  const urgencyBadgeHtml = urgencyInfo ? '<span class="urgency-badge ' + urgencyInfo.level + '">' + urgencyInfo.label + '</span>' : '';
   const catEmoji = getCategoryEmoji(task.category);
   const tags = getTaskTags(task);
   const subjectColor = getSubjectColor(task.category);
@@ -1470,6 +1473,7 @@ function createTaskEl(task) {
         <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px; flex-wrap: wrap;">
           <p class="task-category" style="margin: 0;"><span class="subject-pill" style="background: ${subjectColor}; color: ${subjectTextColor};">${catEmoji} ${escapeHtml(task.category)}</span></p>
           <span class="priority-pill priority-${pri.toLowerCase()}">${pri}</span>
+          ${urgencyBadgeHtml}
           ${task.recurrence && task.recurrence !== 'none' ? `<span class="recurrence-pill" data-type="${escapeHtml(task.recurrence)}" title="Recurring: ${escapeHtml(task.recurrence)}">${escapeHtml(task.recurrence)}</span>` : ''}
           <span class="task-timestamp" style="font-size: 11px; color: var(--text-light); opacity: 0.8;"><i class="ri-history-line"></i> ${task.createdAt}</span>
         </div>
@@ -1791,6 +1795,11 @@ function renderTasks() {
     let filteredTasks = tasks;
     filteredTasks = filteredTasks.filter(task => taskMatchesFilters(task));
 
+    // Smart Sort: re-order by adaptive priority score when enabled
+    if (smartSortEnabled && window.Prioritization) {
+      filteredTasks = window.Prioritization.getSortedTasksByPriority(filteredTasks);
+    }
+
     // Apply sort logic
     if (currentSort === "priority") {
       const priorityOrder = { "High": 1, "Medium": 2, "Low": 3 };
@@ -1861,6 +1870,16 @@ function renderTasks() {
   renderTagSuggestions();
   renderTagFilters();
   updateStats();
+  // Refresh suggestion banner if smart sort is active
+  if (smartSortEnabled && window.Prioritization) {
+    var _banner = document.getElementById('smartSuggestionBanner');
+    if (_banner) {
+      var _suggestions = window.Prioritization.getProductivitySuggestions(tasks);
+      _banner.innerHTML = _suggestions
+        .map(function (s) { return '<div class="smart-suggestion-item">' + s + '</div>'; })
+        .join('');
+    }
+  }
 }
 
 // ==========================
@@ -3285,6 +3304,32 @@ function updateAnalyticsDashboard() {
       renderTasks();
     });
   });
+
+  // ── Smart Sort toggle ──────────────────────────────────────
+  const smartSortBtn = document.getElementById('smartSortBtn');
+  const smartBanner  = document.getElementById('smartSuggestionBanner');
+
+  if (smartSortBtn) {
+    smartSortBtn.addEventListener('click', function () {
+      smartSortEnabled = !smartSortEnabled;
+      smartSortBtn.classList.toggle('active', smartSortEnabled);
+
+      if (smartSortEnabled && smartBanner) {
+        var suggestions = window.Prioritization.getProductivitySuggestions(tasks);
+        smartBanner.innerHTML = suggestions
+          .map(function (s) {
+            return '<div class="smart-suggestion-item">' + s + '</div>';
+          })
+          .join('');
+        smartBanner.classList.add('visible');
+      } else if (smartBanner) {
+        smartBanner.classList.remove('visible');
+      }
+
+      renderTasks();
+    });
+  }
+  // ── End Smart Sort toggle ──────────────────────────────────
 
   document.getElementById('resetTasksBtn')?.addEventListener('click', () => {
     if (!confirm('Clear all tasks?')) return;

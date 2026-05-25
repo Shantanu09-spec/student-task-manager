@@ -379,6 +379,9 @@
                 <i class="ri-sort-asc"></i> A-Z
               </button>
 
+              <button class="smart-sort-btn filter-btn" id="smartSortBtn" title="Sort by AI priority score">
+                Smart Sort
+              </button>
               <button class="filter-btn" id="openPriorityTableBtn" title="Open Priority Table">
                 <i class="ri-list-check-2"></i> Priority Table
               </button>
@@ -390,6 +393,7 @@
 
             <!-- DEADLINE ALERTS -->
             <div class="deadline-alerts" id="deadlineAlerts"></div>
+            <div class="smart-suggestion-banner" id="smartSuggestionBanner"></div>
 
             <!-- TASKS -->
             <div class="task-list-wrapper">
@@ -2075,6 +2079,7 @@
   </button>
   <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
   <script src="storage.js"></script>
+  <script src="prioritization.js"></script>
   <script src="script.js"></script>
   <script src="toast.js"></script>
   <script src="collaborative.js"></script>
