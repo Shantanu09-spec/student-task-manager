@@ -286,11 +286,15 @@
                 aria-label="Task tags"
               />
               <datalist id="taskTagSuggestionsList"></datalist>
-              <input
-                type="datetime-local"
-                id="deadlineInput"
-                title="Set deadline for this task"
-              />
+              <div class="deadline-input-wrapper" style="position: relative; display: inline-flex; align-items: center;">
+                <i class="ri-calendar-event-line" style="position: absolute; left: 10px; color: var(--text-muted); pointer-events: none;"></i>
+                <input
+                  type="datetime-local"
+                  id="deadlineInput"
+                  title="Set deadline for this task"
+                  style="padding-left: 32px;"
+                />
+              </div>
               <button id="addTaskBtn">
                 <i class="ri-add-line"></i> Add Task
               </button>
