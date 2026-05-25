@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FAQ - Study Task Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .faq-accordion {
+      margin-top: 2rem;
+    }
+    .faq-item {
+      border-bottom: 1px solid var(--border-color);
+      padding: 1rem 0;
+    }
+    .faq-question {
+      width: 100%;
+      background: none;
+      border: none;
+      color: var(--text-color);
+      text-align: left;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0;
+    }
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out;
+      color: var(--text-muted);
+      padding-right: 2rem;
+    }
+    .faq-item.active .faq-answer {
+      max-height: 200px;
+      padding-top: 1rem;
+    }
+    .faq-icon {
+      transition: transform 0.3s;
+    }
+    .faq-item.active .faq-icon {
+      transform: rotate(180deg);
+    }
+  </style>
+</head>
+<body class="legal-page">
+  <!-- BACKGROUND -->
+  <div class="bg blur1"></div>
+  <div class="bg blur2"></div>
+  <div class="grid-overlay"></div>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="view-btn" style="text-decoration: none;"><i class="ri-home-4-line"></i> Home</a>
+      <div class="header-brand">
+        <h1>❓ FAQ</h1>
+        <p class="header-subtitle">
+          <span>👋 Help Center</span>
+          <span class="subtitle-divider">•</span>
+          <span>Get Answers Fast</span>
+        </p>
+      </div>
+      <div class="header-controls">
+        <div class="stats-pill">
+          <span class="stats-pill-label">Status</span>
+          <span class="stats-pill-value">❓ Active</span>
+        </div>
+        <div class="theme-pill">
+          <span class="theme-pill-label">Theme</span>
+          <select id="themeSwitcher" class="theme-dropdown" aria-label="Switch Theme">
+            <option value="cosmic">🌌 Cosmic</option>
+            <option value="aurora">🍃 Aurora</option>
+            <option value="cyberpunk">🌸 Cyberpunk</option>
+            <option value="sunset">🌅 Sunset</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="faq-accordion">
+      <div class="faq-item">
+        <button class="faq-question">
+          <span>How is my data saved?</span>
+          <span class="faq-icon">▼</span>
+        </button>
+        <div class="faq-answer">
+          <p>We use your browser's Local Storage to save tasks. This means your data stays on your machine and is never uploaded to any server.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question">
+          <span>Will I lose my tasks if I close the tab?</span>
+          <span class="faq-icon">▼</span>
+        </button>
+        <div class="faq-answer">
+          <p>No! Local Storage persists even after you close the browser or restart your computer. However, clearing browser history/cache might delete them.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question">
+          <span>Is there a mobile app?</span>
+          <span class="faq-icon">▼</span>
+        </button>
+        <div class="faq-answer">
+          <p>This is a web-based tool, but it is fully responsive and works perfectly on mobile browsers. You can even "Add to Home Screen" for an app-like experience.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question">
+          <span>Can I sync my tasks across devices?</span>
+          <span class="faq-icon">▼</span>
+        </button>
+        <div class="faq-answer">
+          <p>Currently, no. Since we value privacy and don't require accounts, tasks are specific to the device and browser where they were created.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p>&copy; 2026 Study Task Tracker. Simple. Private. Fast.</p>
+  </footer>
+
+  <script>
+    const themeSwitcher = document.getElementById("themeSwitcher");
+    const savedTheme = localStorage.getItem("quests_theme") || "cosmic";
+    document.body.setAttribute("data-theme", savedTheme);
+    if (savedTheme === "sunset") document.body.classList.add("light");
+    themeSwitcher.value = savedTheme;
+
+    themeSwitcher.addEventListener("change", (e) => {
+      const theme = e.target.value;
+      document.body.setAttribute("data-theme", theme);
+      if (theme === "sunset") document.body.classList.add("light"); else document.body.classList.remove("light");
+      localStorage.setItem("quests_theme", theme);
+    });
+
+    // Accordion Logic
+    document.querySelectorAll('.faq-question').forEach(button => {
+      button.addEventListener('click', () => {
+        const item = button.parentElement;
+        item.classList.toggle('active');
+      });
+    });
+  </script>
+</body>
+</html>

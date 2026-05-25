@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="bgGradFem" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#1f102f" />
+    </linearGradient>
+    <linearGradient id="accentGradFem" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ec4899" />
+      <stop offset="100%" stop-color="#f43f5e" />
+    </linearGradient>
+    <linearGradient id="neonGlowFem" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ec4899" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Outer circle with border -->
+  <circle cx="50" cy="50" r="48" fill="transparent" stroke="url(#neonGlowFem)" stroke-width="2" />
+  
+  <!-- Back lights/glow -->
+  <circle cx="50" cy="40" r="25" fill="#ec4899" opacity="0.15" filter="blur(5px)" />
+  
+  <!-- Long Hair Back -->
+  <path d="M 28,45 C 25,60 28,78 30,82 C 32,82 35,70 36,60 Z" fill="#0f172a" />
+  <path d="M 72,45 C 75,60 72,78 70,82 C 68,82 65,70 64,60 Z" fill="#0f172a" />
+  
+  <!-- Body (Hoodie) -->
+  <path d="M 22,88 C 22,72 32,68 50,68 C 68,68 78,72 78,88 Z" fill="#311e3b" />
+  <path d="M 28,88 L 50,74 L 72,88 Z" fill="#472a54" />
+  <!-- Hoodie inner/cords -->
+  <path d="M 43,79 L 43,86 M 57,79 L 57,86" stroke="#ec4899" stroke-width="2" stroke-linecap="round" />
+  
+  <!-- Neck -->
+  <rect x="46" y="58" width="8" height="12" rx="2" fill="#ffedd5" />
+  
+  <!-- Head/Face -->
+  <circle cx="50" cy="44" r="17" fill="#ffedd5" />
+  
+  <!-- Eyes -->
+  <circle cx="44" cy="44" r="2" fill="#0f172a" />
+  <circle cx="56" cy="44" r="2" fill="#0f172a" />
+  
+  <!-- Smile -->
+  <path d="M 45,51 Q 50,55 55,51" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round" />
+  
+  <!-- Hair Front (Female Gamer style, long and sleek) -->
+  <path d="M 31,40 C 29,26 40,20 50,20 C 60,20 69,26 69,40 C 69,48 70,55 68,58 C 62,45 56,46 50,46 C 44,46 38,45 32,58 Z" fill="#0f172a" />
+  
+  <!-- Gaming Headset (Pink/Rose) -->
+  <!-- Headband -->
+  <path d="M 32,36 A 19,19 0 0,1 68,36" fill="none" stroke="url(#accentGradFem)" stroke-width="3" stroke-linecap="round" />
+  <!-- Ear cups -->
+  <rect x="29" y="36" width="6" height="12" rx="3" fill="url(#accentGradFem)" />
+  <rect x="65" y="36" width="6" height="12" rx="3" fill="url(#accentGradFem)" />
+  <!-- Mic -->
+  <path d="M 32,45 Q 36,52 42,50" fill="none" stroke="#ec4899" stroke-width="1.5" stroke-linecap="round" />
+  <circle cx="42" cy="50" r="1.5" fill="#f43f5e" />
+</svg>
