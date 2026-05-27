@@ -4254,3 +4254,5 @@ function escapeHtml(str){
 document.getElementById('exportJsonBtn')?.addEventListener('click', () => { const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(tasks, null, 2)); const dlAnchorElem = document.createElement('a'); dlAnchorElem.setAttribute('href', dataStr); dlAnchorElem.setAttribute('download', 'taskquest_backup.json'); dlAnchorElem.click(); });
 
 window.addEventListener('error', (e) => console.error('Global Error:', e.message));
+
+window.addEventListener('error', (e) => console.error('Global Error:', e.message));
