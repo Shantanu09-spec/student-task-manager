@@ -242,3 +242,8 @@ const checkChallengeStatus = (challengeId) => {
   console.log(`Checking status for challenge: ${challengeId}`);
   return true;
 };
+
+const checkChallengeStatus = (challengeId) => {
+  console.log(`Checking status for challenge: ${challengeId}`);
+  return true;
+};
