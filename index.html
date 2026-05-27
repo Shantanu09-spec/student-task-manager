@@ -284,7 +284,8 @@
                   id="taskInput"
                   placeholder="Enter your next task..."
                 />
-                <select id="dependsSelect" aria-label="Depends on (optional)">
+                <label for="dependsSelect" style="display:none">Depends on (optional)</label>
+                <select id="dependsSelect" aria-label="Depends on (optional)" multiple size="1" style="min-width: 160px;">
                   <option value="">No prerequisite</option>
                 </select>
               </div>
