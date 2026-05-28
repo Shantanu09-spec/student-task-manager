@@ -89,6 +89,7 @@ function loadCollaborativeData() {
       if (!Array.isArray(collaborativeState.challenges))     collaborativeState.challenges = [];
       if (!Array.isArray(collaborativeState.sessionHistory)) collaborativeState.sessionHistory = [];
       if (!Array.isArray(collaborativeState.joinedChallenges)) collaborativeState.joinedChallenges = [];
+    }
     const saved = window.TaskQuestStorage
       ? window.TaskQuestStorage.getCollab()
       : JSON.parse(localStorage.getItem('taskquest_v1.collab'));

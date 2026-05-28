@@ -3990,7 +3990,6 @@ if (addExamBtn) {
 // `tasks` undefined and making the entire app non-functional until the user
 // manually clears localStorage. The try/catch recovers silently with an
 // empty array so the app always boots into a usable state.
-let tasks = [];
 try {
   const _raw = window.TaskQuestStorage
     ? window.TaskQuestStorage.getTasks()
