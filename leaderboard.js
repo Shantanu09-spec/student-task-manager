@@ -1,5 +1,22 @@
 "use strict";
 (function() {
+  const STORAGE_KEY = "taskquest_leaderboard_v1";
+  const PROFILE_KEY = "quests_profile";
+  const COINS_KEY = "coins";
+  const TASKS_KEY = "quests";
+  const STREAK_KEY = "streak";
+  const XP_KEY = "xp";
+  // Maximum score any single player entry may hold in the leaderboard store.
+  // Prevents simulateScoreBoost from inflating scores without bound across
+  // repeated clicks, which permanently corrupts the persisted leaderboard
+  // and makes it diverge arbitrarily from real task-derived scores.
+  const MAX_PLAYER_SCORE = 9999;
+
+  // Rate-limit simulateScoreBoost: minimum milliseconds between invocations.
+  // Rapid successive clicks previously allowed unbounded inflation in a single
+  // session with no cooldown.
+  const BOOST_COOLDOWN_MS = 3000;
+  let _lastBoostAt = 0;
   // Use unified storage keys when available, fall back to legacy keys
   const _S = window.TaskQuestStorage;
   const STORAGE_KEY = _S ? _S.KEYS.LEADERBOARD    : "taskquest_leaderboard_v1";
@@ -55,7 +72,7 @@
       return parsed.map(entry => ({
         id: entry.id || `${entry.name}-${Math.random().toString(36).slice(2)}`,
         name: entry.name || "Player",
-        score: Number(entry.score || 0),
+        score: Math.min(MAX_PLAYER_SCORE, Math.max(0, Number(entry.score || 0))),
         completedTasks: Number(entry.completedTasks || 0),
         streak: Number(entry.streak || 0),
         lastUpdated: entry.lastUpdated || currentTimestamp()
@@ -231,14 +248,26 @@
   }
 
   function simulateScoreBoost() {
+    // Rate-limit: reject invocations that arrive within the cooldown window.
+    const now = Date.now();
+    if (now - _lastBoostAt < BOOST_COOLDOWN_MS) {
+      return;
+    }
+    _lastBoostAt = now;
+
     const entries = loadLeaderboard();
     if (!entries.length) return;
+
     const randomPlayer = entries[Math.floor(Math.random() * entries.length)];
     const boost = Math.round(Math.random() * 120 + 40);
-    randomPlayer.score += boost;
+
+    // Clamp score to MAX_PLAYER_SCORE so repeated boosts cannot inflate
+    // the persisted value beyond a defined ceiling.
+    randomPlayer.score = Math.min(MAX_PLAYER_SCORE, randomPlayer.score + boost);
     randomPlayer.completedTasks += Math.random() > 0.5 ? 1 : 0;
     randomPlayer.streak += Math.random() > 0.6 ? 1 : 0;
     randomPlayer.lastUpdated = currentTimestamp();
+
     saveLeaderboard(entries);
     renderLeaderboard();
   }
