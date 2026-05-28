@@ -1,6 +1,12 @@
 // --- State Management ---
 let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
 
+// Maximum number of characters allowed in a single task's text field.
+// Prevents oversized payloads from exhausting the 5 MB localStorage quota
+// and triggering QuotaExceededError across all other storage write paths
+// (profile, coins, streak, XP, leaderboard, collab state, reflection vault).
+const MAX_TASK_LENGTH = 500;
+
 // --- Selectors ---
 const taskForm = document.getElementById("taskForm");
 const taskInput = document.getElementById("taskInput");
@@ -23,6 +29,11 @@ function addTask() {
   
   if (text === "") {
     errorMsg.textContent = "Please enter a task.";
+    return;
+  }
+
+  if (text.length > MAX_TASK_LENGTH) {
+    errorMsg.textContent = `Task is too long. Please keep it under ${MAX_TASK_LENGTH} characters (currently ${text.length}).`;
     return;
   }
 
@@ -67,13 +78,27 @@ function editTask(id) {
 
   const newText = prompt("Edit task:", task.text);
   if (newText !== null && newText.trim() !== "") {
+    if (newText.trim().length > MAX_TASK_LENGTH) {
+      alert(`Task is too long. Please keep it under ${MAX_TASK_LENGTH} characters.`);
+      return;
+    }
     task.text = newText.trim();
     saveAndRender();
   }
 }
 
 function saveAndRender() {
-  localStorage.setItem("tasks", JSON.stringify(tasks));
+  try {
+    localStorage.setItem("tasks", JSON.stringify(tasks));
+  } catch (e) {
+    // QuotaExceededError: storage is full. The in-memory tasks array is
+    // still intact so the UI remains functional, but the user must be
+    // informed that their data was not persisted.
+    if (errorMsg) {
+      errorMsg.textContent = "Storage is full — task could not be saved. Please remove some tasks to free up space.";
+    }
+    console.warn("[TaskQuest] localStorage quota exceeded. Task not persisted.", e);
+  }
   renderTasks();
 }
 
