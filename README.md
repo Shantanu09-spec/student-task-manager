@@ -41,6 +41,23 @@
 
 ---
 
+## 🏛️ System Architecture
+
+TaskQuest is designed as a modular, client-side web application leveraging Vanilla JS:
+
+```
+[ UI Layer: HTML5/CSS3 ] <--> [ Controller: script.js ] <--> [ Storage: storage.js ]
+                                   ^
+                                   |
+                       [ Modules: analytics.js, collaborative.js ]
+```
+
+- **Data Models**: Configured under versioned namespaces in LocalStorage (e.g. `taskquest_v1.tasks`, `taskquest_v1.notes`) using `storage.js`.
+- **Theme Engine**: Centralized theme rules toggling matching HSL color maps variables inside `style.css`.
+- **Prioritization Logic**: Managed in `prioritization.js` using weight factors on task deadlines.
+
+---
+
 ## 📁 Project Structure
 
 ```
