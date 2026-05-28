@@ -4071,6 +4071,11 @@ function addTask() {
     return;
   }
 
+  if (text.length > MAX_TASK_LENGTH) {
+    errorMsg.textContent = `Task is too long. Please keep it under ${MAX_TASK_LENGTH} characters (currently ${text.length}).`;
+    return;
+  }
+
   errorMsg.textContent = "";
 
   const now = new Date();
@@ -4136,6 +4141,10 @@ function editTask(id) {
   if (!task) return;
   const newText = prompt("Edit task:", task.text);
   if (newText !== null && newText.trim() !== "") {
+    if (newText.trim().length > MAX_TASK_LENGTH) {
+      alert(`Task is too long. Please keep it under ${MAX_TASK_LENGTH} characters.`);
+      return;
+    }
     task.text = newText.trim();
   }
   // prompt for dependency selection (minimal UI): allow selecting multiple by comma-separated indices
