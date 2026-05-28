@@ -7862,3 +7862,52 @@ body.sidebar-collapsed .sidebar-nav-item span {
     flex-shrink: 0 !important;
   }
 }
+
+/* ==========================================================================
+   SAAS CONTAINER & SIDEBAR CARD OVERHAUL
+   ========================================================================== */
+
+/* Overhaul container on the dashboard page: borderless, card-less transparent grid */
+.dashboard-page .container {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  max-width: 1500px;
+  width: 95%;
+  margin: 2rem auto;
+}
+
+/* Make main sidebar a floating distinct card on desktop */
+@media (min-width: 1025px) {
+  .dashboard-page .sidebar {
+    background: var(--card-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--radius) !important;
+    padding: 24px !important;
+    box-shadow: var(--shadow) !important;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    transition: all 0.3s ease;
+  }
+  
+  /* Make main content spacious and borderless */
+  .dashboard-page .main-content {
+    padding: 0 0 0 10px !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    min-height: auto !important;
+  }
+}
+
+/* Mobile adjustments to dashboard page container */
+@media (max-width: 1024px) {
+  .dashboard-page .container {
+    padding: 10px 15px !important;
+    margin: 1rem auto !important;
+  }
+  .dashboard-page .main-content {
+    padding: 0 !important;
+  }
+}
