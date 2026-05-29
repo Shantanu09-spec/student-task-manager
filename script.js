@@ -4064,7 +4064,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function addTask() {
   const text = taskInput.value.trim();
-  
+  const category = categorySelect ? categorySelect.value : "Theory";
+  const prioritySelect = document.getElementById("prioritySelect");
+  const priority = prioritySelect ? prioritySelect.value : "Medium";
+  const tags = typeof parseTags === "function" && taskTagsInput ? parseTags(taskTagsInput.value) : [];
+
+  const deadlineInput = document.getElementById("deadlineInput");
+  const deadline = deadlineInput ? deadlineInput.value : "";
+  const recurrenceSelect = document.getElementById("recurrenceSelect");
+  const recurrence = recurrenceSelect ? (recurrenceSelect.value || "none") : "none";
+
   if (text === "") {
     errorMsg.textContent = "Please enter a task.";
     return;
@@ -4077,28 +4086,77 @@ function addTask() {
 
   errorMsg.textContent = "";
 
-  const now = new Date();
-  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  const day = dayNames[now.getDay()];
-  const date = `${now.getDate()} ${now.toLocaleString("default", { month: "long" })} ${now.getFullYear()}`;
-  const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-
-  const deadlineVal = document.getElementById('deadlineInput')?.value || null;
-  const deadlineIso = deadlineVal ? new Date(deadlineVal).toISOString() : null;
-  const dependsSel = document.getElementById('dependsSelect');
-  const dependsVals = dependsSel ? Array.from(dependsSel.selectedOptions).map(o => o.value).filter(v => v !== '') : [];
   const newTask = {
     id: generateTaskId(),
     text: text,
+    category,
+    priority,
     completed: false,
-    timestamp: `(${day}, ${date} at ${time})`,
-    deadline: deadlineIso
-    , depends: dependsVals.map(v => parseInt(v)).filter(Boolean)
+    createdAt: typeof getFormattedDateTime === "function" ? getFormattedDateTime(new Date()) : new Date().toLocaleString(),
+    deadline: deadline || null,
+    penaltyApplied: false,
+    tags
   };
 
+  if (recurrence && recurrence !== "none") {
+    newTask.recurrence = recurrence;
+    const template = {
+      id: `rt-${Date.now()}`,
+      text,
+      category,
+      priority,
+      recurrence,
+      active: true,
+      startDate: deadline || new Date().toISOString()
+    };
+    recurringTemplates.push(template);
+    newTask.masterId = template.id;
+  }
+
+  try {
+    const dependsSel = document.getElementById("dependsSelect");
+    if (dependsSel) {
+      const selected = Array.from(dependsSel.selectedOptions).map(o => o.value).filter(v => v !== "");
+      newTask.depends = selected.map(v => parseInt(v)).filter(Boolean);
+      const safeDeps = [];
+      newTask.depends.forEach(did => {
+        if (typeof hasCircularDependency === "function" && hasCircularDependency(newTask.id, did)) {
+          if (window && window.showToast) window.showToast("Dependency removed to avoid circular reference", "warning");
+        } else {
+          safeDeps.push(did);
+        }
+      });
+      newTask.depends = safeDeps;
+    } else {
+      newTask.depends = [];
+    }
+  } catch (e) {
+    newTask.depends = [];
+  }
+
   tasks.push(newTask);
-  saveAndRender();
   taskInput.value = "";
+  if (taskTagsInput) taskTagsInput.value = "";
+  if (deadlineInput) deadlineInput.value = "";
+
+  if (typeof storeRecentTags === "function") storeRecentTags(tags);
+
+  if (analyticsData && analyticsData.categoryStats) {
+    if (!analyticsData.categoryStats[category]) {
+      analyticsData.categoryStats[category] = { created: 0, completed: 0 };
+    }
+    analyticsData.categoryStats[category].created += 1;
+  }
+
+  if (typeof saveData === "function") saveData();
+  renderTasks();
+
+  if (typeof renderCalendar === "function") renderCalendar();
+  if (typeof updateDeadlineAlerts === "function") updateDeadlineAlerts();
+
+  if (typeof sendNotification === "function") sendNotification("Quest Assigned", `COMPLETE ${text} TASK ASAP`);
+  if (typeof showTaskPopup === "function") showTaskPopup(`COMPLETE ${text.toUpperCase()} TASK ASAP`);
+  if (typeof announce === "function") announce(`Task added: "${text}". Category: ${category}, Priority: ${priority}.`);
 }
 
 function removeTask(id) {
@@ -4193,64 +4251,112 @@ function updateOverdueFlags(){
 }
 
 function renderTasks() {
-  taskList.innerHTML = "";
+  const taskListEl = document.getElementById("taskList");
+  const boardColumns = document.getElementById("boardColumns");
+  const filtersDiv = document.querySelector(".filters");
 
-  // refresh depends select for creation
-  populateDependsSelect();
+  if (!taskListEl) return;
 
-  tasks.forEach(task => {
-    // apply filter
-    if (activeFilter === 'Overdue' && !task.overdue) return;
-
-    const li = document.createElement("li");
-    if (task.completed) li.classList.add("completed");
-    if (task.overdue) li.classList.add('overdue');
-
-    const deadlineLabel = task.deadline ? new Date(task.deadline).toLocaleString() : '';
-    const prereq = task.dependsOn ? tasks.find(t=>t.id===task.dependsOn) : null;
-    const depBadge = prereq ? (prereq.completed ? `<span class="dep-badge ready">Ready</span>` : `<span class="dep-badge blocked">Blocked</span>`) : '';
-    const depInfo = prereq ? `<div class="dep-info">Depends on: ${escapeHtml(prereq.text)}</div>` : '';
-    const allTasks = tasks; // Using the global tasks array
-    const relatedCount = CorrelationEngine.getCorrelationCount(task, allTasks);
-    let correlationBadge = '';
-    if (relatedCount > 0) {
-        correlationBadge = `
-            <span class="correlation-badge" 
-                  style="font-size: 0.7rem; background: var(--primary); color: white; padding: 2px 6px; border-radius: 4px; margin-left: 8px; vertical-align: middle;" 
-                  title="${relatedCount} related task(s) in this subject">
-                  🔗 ${relatedCount}
-            </span>`;
-    }
-    li.innerHTML = `
-      <input type="checkbox" ${task.completed ? "checked" : ""} onchange="toggleTask('${task.id}')">
-      <span>
-        ${task.text}
-        ${depBadge}
-        ${correlationBadge}
-        <small style="display: block; font-size: 0.75rem; opacity: 0.7;">${task.timestamp}</small>
-        ${deadlineLabel ? `<div class="task-deadline ${task.overdue ? 'overdue' : ''}">Due: ${deadlineLabel}</div>` : ''}
-        ${depInfo}
-    const deps = Array.isArray(task.depends) ? task.depends : (task.dependsOn ? [task.dependsOn] : []);
-    const depTasks = deps.map(did => tasks.find(t => t.id === did)).filter(Boolean);
-    const blocked = depTasks.some(d => !d.completed);
-    const depBadge = deps.length ? (blocked ? `<span class="dep-badge blocked">Blocked</span>` : `<span class="dep-badge ready">Ready</span>`) : '';
-    const depInfo = deps.length ? `<div class="dep-info">Depends on: ${depTasks.map(d => escapeHtml(d.text) + (d.completed ? ' ✓' : '')).join(', ')}</div>` : '';
-    li.innerHTML = `
-      <input type="checkbox" ${task.completed ? "checked" : ""} onchange="toggleTask(${task.id})">
-      <span>
-        ${escapeHtml(task.text)}
-        <small style="display: block; font-size: 0.75rem; opacity: 0.7;">${escapeHtml(task.timestamp)}</small>
-      </span>
-      <div style="display: flex; gap: 5px;">
-        <button onclick="editTask('${task.id}')" style="padding: 0.5rem; font-size: 0.8rem;">Edit</button>
-        <button onclick="removeTask('${task.id}')" style="padding: 0.5rem; font-size: 0.8rem; background: var(--error-color, #ef4444);">Remove</button>
-      </div>
-    `;
-
-    taskList.appendChild(li);
+  // Ensure new tasks always have a category for Kanban grouping
+  tasks = tasks.map(task => {
+    if (!task.category) task.category = "Theory";
+    if (!task.priority) task.priority = "Medium";
+    if (!task.tags) task.tags = [];
+    return task;
   });
 
-  updateStats();
+  if (currentView === "list" || !boardColumns) {
+    taskListEl.style.display = "flex";
+    if (boardColumns) boardColumns.style.display = "none";
+    if (filtersDiv) filtersDiv.style.display = "flex";
+
+    taskListEl.innerHTML = "";
+
+    let filteredTasks = tasks;
+    if (typeof taskMatchesFilters === "function") {
+      filteredTasks = filteredTasks.filter(task => taskMatchesFilters(task));
+    } else if (typeof activeFilter !== "undefined" && activeFilter === "Overdue") {
+      filteredTasks = filteredTasks.filter(task => task.overdue);
+    }
+
+    if (smartSortEnabled && window.Prioritization) {
+      filteredTasks = window.Prioritization.getSortedTasksByPriority(filteredTasks);
+    }
+
+    if (currentSort === "priority") {
+      const priorityOrder = { High: 1, Medium: 2, Low: 3 };
+      filteredTasks.sort((a, b) => (priorityOrder[a.priority] || 99) - (priorityOrder[b.priority] || 99));
+    } else if (currentSort === "alphabetical") {
+      filteredTasks.sort((a, b) => a.text.localeCompare(b.text));
+    } else if (currentSort === "deadline") {
+      filteredTasks.sort((a, b) => {
+        const aD = a.deadline ? new Date(a.deadline).getTime() : Infinity;
+        const bD = b.deadline ? new Date(b.deadline).getTime() : Infinity;
+        return aD - bD;
+      });
+    }
+
+    if (filteredTasks.length === 0) {
+      taskListEl.innerHTML = `
+        <div class="empty-state">
+          <i class="ri-ghost-2-line"></i>
+          <h3>No Quests Yet</h3>
+          <p>Add tasks and begin your productivity journey ✨</p>
+        </div>
+      `;
+    } else {
+      filteredTasks.forEach(task => {
+        if (typeof createTaskEl === "function") {
+          taskListEl.appendChild(createTaskEl(task));
+        } else {
+          const li = document.createElement("li");
+          li.textContent = task.text;
+          taskListEl.appendChild(li);
+        }
+      });
+    }
+  } else {
+    taskListEl.style.display = "none";
+    boardColumns.style.display = "grid";
+    if (filtersDiv) filtersDiv.style.display = "none";
+
+    boardColumns.innerHTML = "";
+    const categories = ["Theory", "Practical", "Assignment", "Revision"];
+
+    categories.forEach(cat => {
+      const colDiv = document.createElement("div");
+      colDiv.className = "board-column";
+      colDiv.setAttribute("data-category", cat);
+
+      const colTasks = tasks.filter(t => (t.category || "Theory") === cat);
+      const catEmoji = typeof getCategoryEmoji === "function" ? getCategoryEmoji(cat) : "📌";
+
+      colDiv.innerHTML = `
+        <div class="board-column-header">
+          <div class="column-title">${catEmoji} ${cat}</div>
+          <div class="column-count">${colTasks.length}</div>
+        </div>
+        <div class="board-column-body" data-category="${cat}"></div>
+      `;
+
+      const bodyDiv = colDiv.querySelector(".board-column-body");
+      colTasks.forEach(task => {
+        if (typeof createTaskEl === "function") {
+          bodyDiv.appendChild(createTaskEl(task));
+        }
+      });
+
+      if (typeof setupColumnDragOver === "function") {
+        setupColumnDragOver(bodyDiv);
+      }
+      boardColumns.appendChild(colDiv);
+    });
+  }
+
+  if (typeof renderTagSuggestions === "function") renderTagSuggestions();
+  if (typeof renderTagFilters === "function") renderTagFilters();
+  if (typeof updateStats === "function") updateStats();
+  try { if (typeof renderDependsSelect === "function") renderDependsSelect(); } catch (e) {}
 }
 
 function updateStats() {
