@@ -4,6 +4,14 @@
 (function () {
   "use strict";
 
+  // ─── Singleton guard ──────────────────────────────────────────────────────
+  // Prevents double-initialization when the script is evaluated more than once
+  // (dynamic import, SPA route re-entry, hot-module reload, etc.).
+  // The flag lives on window so it survives re-execution of this IIFE.
+  if (window.__taskQuestAnalyticsReady) return;
+  window.__taskQuestAnalyticsReady = true;
+  // ─────────────────────────────────────────────────────────────────────────
+
   // Storage keys — read from the canonical taskquest_v1 namespace via
   // window.TaskQuestStorage (storage.js). The legacy "quests" / "tasks" /
   // "streak" constants are intentionally removed; use the API accessors below.
@@ -625,12 +633,25 @@
     });
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
+  // ─── Boot ─────────────────────────────────────────────────────────────────
+  // `DOMContentLoaded` only fires once per page load. If the script is
+  // evaluated after the event has already fired (async/defer/dynamic import),
+  // the listener would never run. Checking readyState handles both cases with
+  // a single code path and no risk of a double call.
+  function boot() {
     initExportMenu();
     initChartToggles();
     initTabRefresh();
     refreshAnalytics();
-  });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot, { once: true });
+  } else {
+    // DOM is already interactive or complete — run synchronously.
+    boot();
+  }
+  // ─────────────────────────────────────────────────────────────────────────
 
   window.refreshAnalytics = refreshAnalytics;
   window.loadQuests = loadQuests;
